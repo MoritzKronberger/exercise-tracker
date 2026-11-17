@@ -10,10 +10,14 @@ export async function requireAuth() {
   if (!(await isValidToken(jar.get(AUTH_COOKIE)?.value))) redirect("/login");
 }
 
-/** "Today" in the user's timezone (reported by the browser via the `tz` cookie). */
-export async function userToday() {
+/** The user's IANA timezone (reported by the browser via the `tz` cookie). */
+export async function userTimeZone() {
   await connection();
-  const jar = await cookies();
-  const tz = jar.get("tz")?.value;
-  return todayIn(tz ? decodeURIComponent(tz) : process.env.TZ_DEFAULT || "Europe/Berlin");
+  const tz = (await cookies()).get("tz")?.value;
+  return tz ? decodeURIComponent(tz) : process.env.TZ_DEFAULT || "Europe/Berlin";
+}
+
+/** "Today" in the user's timezone. */
+export async function userToday() {
+  return todayIn(await userTimeZone());
 }

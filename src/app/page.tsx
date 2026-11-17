@@ -2,8 +2,10 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ActionBar, Badge, Card, EmptyState, LinkButton, PageSkeleton, Row, cx } from "@/components/ui";
 import { addDays, diffDays, formatDate, isISODate, startOfWeek, WEEKDAYS_SHORT } from "@/lib/dates";
-import { getAgenda } from "@/lib/data";
-import { userToday } from "@/lib/server";
+import { computeAdherence, type DayStatus } from "@/lib/adherence";
+import { getAgenda, getPlanItems, listSchedules, sessionSummaries } from "@/lib/data";
+import { ProgressRings } from "@/components/progress-rings";
+import { userTimeZone, userToday } from "@/lib/server";
 import { DayArrows, DaySwiper, StartButton } from "./_dashboard/client";
 
 export default function Home({ searchParams }: PageProps<"/">) {
@@ -19,8 +21,21 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
   const today = await userToday();
   const date = isISODate(sp.date) ? sp.date : today;
   const week = Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(date), i));
-  const agenda = await getAgenda(week);
+  const [agenda, schedules, summaries, timeZone] = await Promise.all([getAgenda(week), listSchedules(), sessionSummaries(), userTimeZone()]);
   const day = agenda.find((a) => a.date === date)!;
+
+  // Training block shown in the rings: the one running on the selected day (else the one running today).
+  const block = schedules.find((s) => s.startDate <= date && s.endDate >= date) ?? schedules.find((s) => s.startDate <= today && s.endDate >= today);
+  const adherence = block
+    ? computeAdherence({
+        startDate: block.startDate,
+        weeks: block.weeks,
+        trainingWeekdays: new Set((await getPlanItems([block.planId])).map((i) => i.weekday)),
+        sessions: summaries.filter((s) => s.scheduleId === block.id && s.sets > 0),
+        today,
+        timeZone,
+      })
+    : null;
 
   const rel = diffDays(date, today);
   const title = rel === 0 ? "Today" : rel === 1 ? "Tomorrow" : rel === -1 ? "Yesterday" : formatDate(date, { weekday: "long" });
@@ -49,6 +64,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
       {/* Week strip — 7 × 64px targets */}
       <div className="mb-3 grid grid-cols-7 gap-1">
         {agenda.map((a, i) => {
+          const status: DayStatus | undefined = adherence?.days.get(a.date);
           const done = a.sessions.some((s) => s.finishedAt);
           const planned = a.workouts.length > 0;
           const selected = a.date === date;
@@ -70,13 +86,31 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
               <span
                 className={cx(
                   "h-[4px] w-2 rounded-full",
-                  done ? (selected ? "bg-green-700" : "bg-green-700") : planned ? (selected ? "bg-background-100" : "bg-gray-1000") : "bg-transparent",
+                  status === "on-time"
+                    ? "bg-green-700"
+                    : status === "late"
+                      ? "bg-amber-700"
+                      : status === "skipped"
+                        ? "bg-red-700"
+                        : done
+                          ? "bg-green-700"
+                          : planned
+                            ? selected
+                              ? "bg-background-100"
+                              : "bg-gray-1000"
+                            : "bg-transparent",
                 )}
               />
             </Link>
           );
         })}
       </div>
+
+      {adherence && block && (
+        <div className="mb-2">
+          <ProgressRings a={adherence} weekLabel={`Block · ${adherence.onTime + adherence.late} of ${adherence.total} done`} />
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         {day.workouts.length === 0 && freestyle.length === 0 && (
