@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, max } from "drizzle-orm";
+import { and, asc, desc, eq, lte, max } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
@@ -242,20 +242,27 @@ export async function removeSessionExercise(sessionExerciseId: number) {
   refresh();
 }
 
-export async function logSet(sessionId: number, exerciseId: number, weight: number, reps: number) {
+/**
+ * `completedAtIso` is the moment the set was logged on the device. Sets logged while offline are
+ * retried later, so the client timestamp keeps rest times accurate.
+ */
+export async function logSet(sessionId: number, exerciseId: number, weight: number, reps: number, completedAtIso?: string) {
   await requireAuth();
   const db = await getDb();
+  const serverNow = Date.now();
+  const clientTs = completedAtIso ? Date.parse(completedAtIso) : NaN;
+  // Accept the device time if it is plausible (not in the future, at most 12h old).
+  const now = new Date(Number.isFinite(clientTs) && clientTs <= serverNow + 60_000 && clientTs >= serverNow - 12 * 3600_000 ? Math.min(clientTs, serverNow) : serverNow);
   const [last] = await db
     .select({ completedAt: setLogs.completedAt })
     .from(setLogs)
-    .where(eq(setLogs.sessionId, sessionId))
+    .where(and(eq(setLogs.sessionId, sessionId), lte(setLogs.completedAt, now)))
     .orderBy(desc(setLogs.completedAt))
     .limit(1);
   const [{ n }] = await db
     .select({ n: max(setLogs.setNumber) })
     .from(setLogs)
     .where(and(eq(setLogs.sessionId, sessionId), eq(setLogs.exerciseId, exerciseId)));
-  const now = new Date();
   await db.insert(setLogs).values({
     sessionId,
     exerciseId,

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useOffline } from "next/offline";
 import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import {
   addSessionExercise,
@@ -96,13 +97,14 @@ export function WorkoutView({ data }: { data: WorkoutData }) {
 
   const handleLog = (exerciseId: number, weight: number, reps: number) => {
     startTransition(async () => {
-      addPending({ exerciseId, weight, reps, completedAt: new Date().toISOString() });
-      await logSet(data.id, exerciseId, weight, reps);
+      const completedAt = new Date().toISOString();
+      addPending({ exerciseId, weight, reps, completedAt });
+      await logSet(data.id, exerciseId, weight, reps, completedAt);
     });
   };
 
   return (
-    <div className={cx("mx-auto max-w-xl", !finished && "pb-24")}>
+    <div className={cx("mx-auto max-w-xl", !finished && "pb-32")}>
       <Link href={`/?date=${data.date}`} className="mb-3 inline-flex items-center gap-1 text-sm text-gray-900 hover:text-gray-1000">
         <IconChevronLeft /> {formatDate(data.date, { weekday: "long", day: "numeric", month: "short" })}
       </Link>
@@ -379,10 +381,15 @@ function LoggedRow({ index, log, prev, targetReps }: { index: number; log: Log; 
             <IconClock size={12} /> {fmtDuration(log.restSeconds)}
           </span>
         )}
-        {log.pending && <span className="text-xs text-gray-700">saving…</span>}
+        {log.pending && <PendingLabel />}
       </span>
     </button>
   );
+}
+
+function PendingLabel() {
+  const offline = useOffline();
+  return offline ? <Badge color="amber">offline · will sync</Badge> : <span className="text-xs text-gray-700">saving…</span>;
 }
 
 function Stepper({

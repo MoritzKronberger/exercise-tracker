@@ -18,7 +18,17 @@ A personal workout planner and tracker built with Next.js 16, Postgres (Neon) an
 3. Add an environment variable **`APP_PASSWORD`** (Settings → Environment Variables) — that's your login.
 4. **Redeploy.** The build runs `scripts/migrate.ts` first, which creates/updates the tables automatically.
 
-Open the site on your phone and use *Add to Home Screen* for an app-like experience.
+## Install as an app
+
+Lift Log is an installable PWA (standalone window, app icon, home-screen shortcuts for Today / Weight / Stats).
+
+- **iPhone (Safari):** Share → *Add to Home Screen*.
+- **Android (Chrome):** menu → *Install app* (or accept the install banner).
+- **Desktop (Chrome/Edge):** install icon in the address bar.
+
+Bad gym signal is handled: if the connection drops, logged sets show *offline · will sync* and are sent
+automatically when the network returns, keeping the time you actually logged them (so rest times stay correct).
+The app still needs a connection to open pages it hasn't loaded yet.
 
 ## Local development
 
