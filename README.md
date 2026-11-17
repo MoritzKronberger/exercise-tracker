@@ -10,6 +10,16 @@ A personal workout planner and tracker built with Next.js 16, Postgres (Neon) an
 - **Statistics**: volume per workout, weekly volume, per-exercise progression (top set + estimated 1RM), per-block summaries, workout history; everything can be filtered by training block.
 - **Body weight**: log entries and see them next to your training blocks and volume.
 
+## Design
+
+Built for use mid-workout with tired hands, on a coarse grid:
+
+- **8px unit, whole multiples only** (Tailwind's `--spacing` is set to 8px, so `h-6` = 48px, `h-8` = 64px).
+- **Touch targets:** 48px minimum, 56px for workout controls, 64px for the one primary action per screen.
+- **Four text sizes** (`text-meta`, `text-body`, `text-title`, `text-display`); all other sizes are disabled.
+- **Workout focus mode:** one exercise per screen, rest timer in the top bar, "Log set" in the thumb zone,
+  everything else in the menu behind the exercise counter.
+
 ## Deploy to Vercel
 
 1. Push this repository to GitHub and **import it in Vercel** (framework preset: Next.js, no settings to change).

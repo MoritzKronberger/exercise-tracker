@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useTransition, type ReactNode } from "react";
 import { startSession } from "@/app/actions";
 import { Button } from "@/components/ui";
-import { IconChevronLeft, IconChevronRight, IconPlay } from "@/components/icons";
+import { IconChevronLeft, IconChevronRight } from "@/components/icons";
 
 export function DaySwiper({ prev, next, children }: { prev: string; next: string; children: ReactNode }) {
   const router = useRouter();
@@ -21,25 +21,25 @@ export function DaySwiper({ prev, next, children }: { prev: string; next: string
         touch.current = null;
         if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? next : prev);
       }}
-      className="mx-auto max-w-xl"
     >
       {children}
     </div>
   );
 }
 
+/** Desktop only — phones swipe. */
 export function DayArrows({ prev, next }: { prev: string; next: string }) {
   const router = useRouter();
   const go = (d: string) => router.replace(`/?date=${d}`, { scroll: false });
   return (
-    <>
-      <Button size="small" variant="tertiary" onClick={() => go(prev)} aria-label="Previous day">
-        <IconChevronLeft />
+    <div className="hidden gap-1 md:flex">
+      <Button variant="ghost" onClick={() => go(prev)} aria-label="Previous day">
+        <IconChevronLeft size={24} />
       </Button>
-      <Button size="small" variant="tertiary" onClick={() => go(next)} aria-label="Next day">
-        <IconChevronRight />
+      <Button variant="ghost" onClick={() => go(next)} aria-label="Next day">
+        <IconChevronRight size={24} />
       </Button>
-    </>
+    </div>
   );
 }
 
@@ -48,24 +48,17 @@ export function StartButton({
   scheduleId,
   label,
   variant = "primary",
-  size = "large",
+  size = "xl",
 }: {
   date: string;
   scheduleId: number | null;
   label: string;
-  variant?: "primary" | "secondary" | "tertiary";
-  size?: "small" | "medium" | "large";
+  variant?: "primary" | "secondary";
+  size?: "lg" | "xl";
 }) {
   const [pending, start] = useTransition();
   return (
-    <Button
-      variant={variant}
-      size={size}
-      className={size === "large" ? "w-full" : undefined}
-      disabled={pending}
-      onClick={() => start(() => startSession(date, scheduleId))}
-    >
-      {size === "large" && <IconPlay size={14} />}
+    <Button variant={variant} size={size} className="w-full" disabled={pending} onClick={() => start(() => startSession(date, scheduleId))}>
       {pending ? "Starting…" : label}
     </Button>
   );

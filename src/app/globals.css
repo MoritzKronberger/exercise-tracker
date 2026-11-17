@@ -85,6 +85,28 @@
   }
 }
 
+/*
+ * Grid: one 8px unit, whole multiples only (p-2 = 16px, h-6 = 48px, h-7 = 56px, h-8 = 64px).
+ * Touch targets: 48px minimum, 56px in workout mode, 64px for the primary action of a screen.
+ * Type: four sizes only. Radii: 8px for controls, 16px for surfaces.
+ */
+@theme {
+  --spacing: 8px;
+  --text-*: initial;
+  --text-meta: 14px;
+  --text-meta--line-height: 20px;
+  --text-body: 17px;
+  --text-body--line-height: 24px;
+  --text-title: 22px;
+  --text-title--line-height: 32px;
+  --text-display: 34px;
+  --text-display--line-height: 40px;
+  --radius-*: initial;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+}
+
 @theme inline {
   --color-background-100: var(--ds-background-100);
   --color-background-200: var(--ds-background-200);

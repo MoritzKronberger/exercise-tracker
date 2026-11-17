@@ -20,7 +20,7 @@ const fmtTick = (ts: number) => new Intl.DateTimeFormat("en-GB", { day: "numeric
 const fmtFull = (ts: number) =>
   new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(ts);
 
-const axis = { stroke: "var(--ds-gray-900)", fontSize: 11, tickLine: false, axisLine: false } as const;
+const axis = { stroke: "var(--ds-gray-900)", fontSize: 12, tickLine: false, axisLine: false } as const;
 
 export type Band = { id: number; from: string; to: string; label: string };
 
@@ -39,13 +39,13 @@ function TooltipBox({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg bg-background-100 px-3 py-2 text-xs shadow-menu">
-      <p className="mb-1 font-medium">{fmtFull(Number(label))}</p>
+    <div className="rounded-sm bg-background-100 px-2 py-1 text-meta shadow-menu">
+      <p className="font-medium">{fmtFull(Number(label))}</p>
       {payload.map((p) => (
-        <p key={String(p.dataKey)} className="tabular flex items-center gap-2 text-gray-900">
-          <span className="size-2 rounded-full" style={{ background: p.color }} />
+        <p key={String(p.dataKey)} className="tabular flex items-center gap-1 text-gray-900">
+          <span className="size-1 rounded-full" style={{ background: p.color }} />
           {String(p.name)}
-          <span className="ml-auto pl-3 font-medium text-gray-1000">
+          <span className="ml-auto pl-2 font-medium text-gray-1000">
             {Number(p.value).toLocaleString("en-US", { maximumFractionDigits: digits })} {unit}
           </span>
         </p>
@@ -79,12 +79,12 @@ export function BandLegend({ bands }: { bands: Band[] }) {
   if (!bands.length) return null;
   const fmt = (d: string) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(toTs(d));
   return (
-    <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-900">
+    <ul className="mt-1 flex flex-col text-meta text-gray-900">
       {[...bands]
         .sort((x, y) => x.from.localeCompare(y.from))
         .map((b) => (
-          <li key={b.id} className="flex items-center gap-1.5">
-            <span className="size-3 rounded-sm shadow-border" style={{ background: bandFill(bands, b) }} />
+          <li key={b.id} className="flex min-h-3 items-center gap-1">
+            <span className="size-2 rounded-sm shadow-border" style={{ background: bandFill(bands, b) }} />
             <span className="font-medium text-gray-1000">{b.label}</span>
             <span className="tabular">
               {fmt(b.from)} – {fmt(b.to)}
@@ -177,7 +177,7 @@ export function ProgressLines({ data, height = 240 }: { data: { date: string; to
         <XAxis dataKey="ts" type="number" scale="time" domain={domainFor(points.map((p) => p.ts))} tickFormatter={fmtTick} {...axis} minTickGap={24} />
         <YAxis domain={[(min: number) => Math.max(0, Math.floor((min - 5) / 5) * 5), (max: number) => Math.ceil((max + 5) / 5) * 5]} allowDecimals={false} tickFormatter={(v) => String(Math.round(v))} {...axis} width={44} />
         <Tooltip content={(p) => <TooltipBox {...p} unit="kg" />} cursor={{ stroke: "var(--ds-gray-500)" }} />
-        <Legend verticalAlign="top" align="left" height={28} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: "var(--ds-gray-900)", paddingLeft: 40 }} />
+        <Legend verticalAlign="top" align="left" height={32} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 14, color: "var(--ds-gray-900)", paddingLeft: 40 }} />
         <Line dataKey="top" name="Top set" stroke="var(--viz-1)" strokeWidth={2} dot={{ r: 3, strokeWidth: 2, stroke: "var(--ds-background-100)", fill: "var(--viz-1)" }} isAnimationActive={false} />
         <Line dataKey="e1rm" name="Est. 1RM" stroke="var(--viz-2)" strokeWidth={2} strokeDasharray="4 3" dot={{ r: 3, strokeWidth: 2, stroke: "var(--ds-background-100)", fill: "var(--viz-2)" }} isAnimationActive={false} />
       </LineChart>

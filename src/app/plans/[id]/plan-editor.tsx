@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { deletePlan, duplicatePlan, renamePlan, savePlanDay, type DayItemInput } from "@/app/actions";
 import { Button, Card, Input, LinkButton, Select, cx } from "@/components/ui";
-import { IconChevronDown, IconChevronLeft, IconChevronUp, IconCopy, IconPlus, IconTrash } from "@/components/icons";
+import { IconChevronDown, IconChevronLeft, IconPlus, IconTrash } from "@/components/icons";
 import { WEEKDAYS } from "@/lib/dates";
 
 type Item = DayItemInput & { weekday: number };
@@ -12,62 +12,58 @@ type Ex = { id: number; name: string };
 
 export function PlanEditor({ plan, items, exercises }: { plan: { id: number; name: string }; items: Item[]; exercises: Ex[] }) {
   const [name, setName] = useState(plan.name);
+  const [open, setOpen] = useState<number | null>(null);
   const [pending, start] = useTransition();
 
   return (
     <div>
-      <Link href="/plans" className="-my-2 mb-2 inline-flex items-center gap-1 py-2 text-sm text-gray-900 hover:text-gray-1000">
-        <IconChevronLeft /> Plans
+      <Link href="/plans" className="-ml-1 flex h-6 w-fit items-center gap-1 px-1 text-body text-gray-900">
+        <IconChevronLeft size={24} /> Plans
       </Link>
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          className="min-w-0 flex-1 rounded-md bg-transparent px-1 py-1 text-2xl font-semibold tracking-tight outline-none hover:bg-gray-alpha-100 focus:bg-gray-alpha-100"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={() => name.trim() && name !== plan.name && start(() => renamePlan(plan.id, name))}
-          aria-label="Plan name"
-        />
-        <div className="flex gap-2">
-          <LinkButton href={`/schedule?plan=${plan.id}`} variant="primary" size="small">
-            Schedule
-          </LinkButton>
-          <Button size="small" onClick={() => start(() => duplicatePlan(plan.id))} disabled={pending}>
-            <IconCopy /> Duplicate
-          </Button>
-          <Button
-            size="small"
-            variant="tertiary"
-            className="text-red-900"
-            onClick={() => confirm(`Delete plan “${plan.name}” and all its schedules?`) && start(() => deletePlan(plan.id))}
-            disabled={pending}
-          >
-            <IconTrash /> Delete
-          </Button>
-        </div>
-      </div>
+      <input
+        className="mb-2 h-7 w-full rounded-sm bg-transparent text-display font-semibold tracking-tight outline-none focus:bg-gray-alpha-100"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={() => name.trim() && name !== plan.name && start(() => renamePlan(plan.id, name))}
+        aria-label="Plan name"
+      />
 
       {exercises.length === 0 && (
-        <Card className="mb-4 p-4 text-sm">
-          You don&apos;t have any exercises yet.{" "}
-          <Link className="text-blue-900 hover:underline" href="/exercises">
-            Create some first
+        <Card className="mb-2 p-2 text-body">
+          No exercises yet —{" "}
+          <Link className="font-medium text-blue-900" href="/exercises">
+            create some first
           </Link>
           .
         </Card>
       )}
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
         {WEEKDAYS.map((day, wd) => (
           <DayEditor
             key={wd}
             planId={plan.id}
             weekday={wd}
             label={day}
+            open={open === wd}
+            onToggle={() => setOpen(open === wd ? null : wd)}
             initial={items.filter((i) => i.weekday === wd)}
             all={items}
             exercises={exercises}
           />
         ))}
+      </div>
+
+      <LinkButton href={`/schedule?plan=${plan.id}`} variant="primary" size="xl" className="mt-3 w-full">
+        Schedule this plan
+      </LinkButton>
+      <div className="mt-1 grid grid-cols-2 gap-1">
+        <Button variant="ghost" onClick={() => start(() => duplicatePlan(plan.id))} disabled={pending}>
+          Duplicate
+        </Button>
+        <Button variant="danger" onClick={() => confirm(`Delete “${plan.name}” and its schedules?`) && start(() => deletePlan(plan.id))} disabled={pending}>
+          Delete
+        </Button>
       </div>
     </div>
   );
@@ -77,6 +73,8 @@ function DayEditor({
   planId,
   weekday,
   label,
+  open,
+  onToggle,
   initial,
   all,
   exercises,
@@ -84,72 +82,39 @@ function DayEditor({
   planId: number;
   weekday: number;
   label: string;
+  open: boolean;
+  onToggle: () => void;
   initial: Item[];
   all: Item[];
   exercises: Ex[];
 }) {
   const serialized = JSON.stringify(initial.map(({ exerciseId, sets, reps }) => ({ exerciseId, sets, reps })));
   const [rows, setRows] = useState<DayItemInput[]>(() => JSON.parse(serialized));
-  const [pending, start] = useTransition();
   const [synced, setSynced] = useState(serialized);
   if (synced !== serialized) {
     // Server data changed (e.g. after saving) – adopt it.
     setSynced(serialized);
     setRows(JSON.parse(serialized));
   }
+  const [pending, start] = useTransition();
   const dirty = JSON.stringify(rows) !== serialized;
   const otherDays = [...new Set(all.map((i) => i.weekday))].filter((d) => d !== weekday);
-
+  const nameOf = (id: number) => exercises.find((e) => e.id === id)?.name ?? "(archived)";
   const update = (idx: number, patch: Partial<DayItemInput>) => setRows((r) => r.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
-  const move = (idx: number, dir: -1 | 1) =>
-    setRows((r) => {
-      const next = [...r];
-      const j = idx + dir;
-      if (j < 0 || j >= next.length) return r;
-      [next[idx], next[j]] = [next[j], next[idx]];
-      return next;
-    });
 
   return (
-    <Card className={cx("p-4", dirty && "shadow-[0_0_0_1px_var(--ds-blue-700)]")}>
-      <div className="flex items-center gap-2">
-        <h2 className="flex-1 font-medium">
-          {label}
-          {rows.length === 0 && otherDays.length > 0 && <span className="ml-2 text-sm font-normal text-gray-900 sm:hidden">Rest</span>}
-        </h2>
-        {rows.length === 0 && <span className={cx("text-sm whitespace-nowrap text-gray-900", otherDays.length > 0 && "hidden sm:inline")}>Rest day</span>}
-        {otherDays.length > 0 && rows.length === 0 && (
-          <Select
-            className="h-8 w-[118px] shrink-0 text-xs"
-            value=""
-            onChange={(e) => {
-              const from = Number(e.target.value);
-              setRows(all.filter((i) => i.weekday === from).map(({ exerciseId, sets, reps }) => ({ exerciseId, sets, reps })));
-            }}
-          >
-            <option value="" disabled>
-              Copy from…
-            </option>
-            {otherDays.map((d) => (
-              <option key={d} value={d}>
-                {WEEKDAYS[d]}
-              </option>
-            ))}
-          </Select>
-        )}
-      </div>
+    <Card className={cx("overflow-hidden", dirty && "shadow-[0_0_0_2px_var(--ds-blue-700)]")}>
+      <button type="button" onClick={onToggle} className="flex min-h-7 w-full items-center gap-2 px-2 text-left active:bg-gray-alpha-100" aria-expanded={open}>
+        <span className="w-12 shrink-0 text-body font-semibold">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-meta text-gray-900">{rows.length ? rows.map((r) => nameOf(r.exerciseId)).join(", ") : "Rest"}</span>
+        <IconChevronDown size={24} className={cx("shrink-0 text-gray-700 transition-transform", open && "rotate-180")} />
+      </button>
 
-      {rows.length > 0 && (
-        <div className="mt-3 flex flex-col gap-2">
-          <div className="hidden grid-cols-[1fr_56px_56px_auto] gap-2 px-0.5 text-[11px] font-medium tracking-wide text-gray-900 uppercase sm:grid">
-            <span>Exercise</span>
-            <span className="text-center">Sets</span>
-            <span className="text-center">Reps</span>
-            <span className="w-[88px]" />
-          </div>
+      {open && (
+        <div className="flex flex-col gap-2 border-t border-gray-alpha-400 p-2">
           {rows.map((row, idx) => (
-            <div key={idx} className="grid grid-cols-[68px_68px_1fr_auto] items-center gap-2 border-b border-gray-alpha-200 pb-2 last:border-0 sm:grid-cols-[1fr_56px_56px_auto] sm:border-0 sm:pb-0">
-              <Select className="col-span-4 sm:col-span-1" value={row.exerciseId} onChange={(e) => update(idx, { exerciseId: Number(e.target.value) })}>
+            <div key={idx} className="flex flex-col gap-1">
+              <Select value={row.exerciseId} onChange={(e) => update(idx, { exerciseId: Number(e.target.value) })} aria-label="Exercise">
                 {!exercises.some((e) => e.id === row.exerciseId) && <option value={row.exerciseId}>(archived)</option>}
                 {exercises.map((e) => (
                   <option key={e.id} value={e.id}>
@@ -157,77 +122,75 @@ function DayEditor({
                   </option>
                 ))}
               </Select>
-              <label className="relative">
-              <Input
-                type="number"
-                inputMode="numeric"
-                min={1}
-                className="pr-7 pl-1 text-center sm:px-1"
-                value={row.sets}
-                onChange={(e) => update(idx, { sets: Number(e.target.value) })}
-                aria-label="Sets"
-              />
-                <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-gray-700 sm:hidden">sets</span>
-              </label>
-              <label className="relative">
-              <Input
-                type="number"
-                inputMode="numeric"
-                min={1}
-                className="pr-7 pl-1 text-center sm:px-1"
-                value={row.reps}
-                onChange={(e) => update(idx, { reps: Number(e.target.value) })}
-                aria-label="Reps"
-              />
-                <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-gray-700 sm:hidden">reps</span>
-              </label>
-              <div className="flex justify-self-end">
-                <Button size="small" variant="tertiary" className="px-1.5" onClick={() => move(idx, -1)} aria-label="Move up" disabled={idx === 0}>
-                  <IconChevronUp />
-                </Button>
-                <Button size="small" variant="tertiary" className="px-1.5" onClick={() => move(idx, 1)} aria-label="Move down" disabled={idx === rows.length - 1}>
-                  <IconChevronDown />
-                </Button>
-                <Button size="small" variant="tertiary" className="px-1.5" onClick={() => setRows((r) => r.filter((_, i) => i !== idx))} aria-label="Remove">
-                  <IconTrash />
+              <div className="flex items-center gap-1">
+                <NumberField value={row.sets} onChange={(n) => update(idx, { sets: n })} suffix="sets" />
+                <span className="text-body text-gray-900">×</span>
+                <NumberField value={row.reps} onChange={(n) => update(idx, { reps: n })} suffix="reps" />
+                <Button variant="ghost" className="ml-auto px-0" onClick={() => setRows((r) => r.filter((_, i) => i !== idx))} aria-label="Remove">
+                  <IconTrash size={24} />
                 </Button>
               </div>
             </div>
           ))}
+
+          {rows.length === 0 && otherDays.length > 0 && (
+            <Select
+              value=""
+              aria-label="Copy from another day"
+              onChange={(e) => {
+                const from = Number(e.target.value);
+                setRows(all.filter((i) => i.weekday === from).map(({ exerciseId, sets, reps }) => ({ exerciseId, sets, reps })));
+              }}
+            >
+              <option value="" disabled>
+                Copy from…
+              </option>
+              {otherDays.map((d) => (
+                <option key={d} value={d}>
+                  {WEEKDAYS[d]}
+                </option>
+              ))}
+            </Select>
+          )}
+
+          <Button
+            variant="secondary"
+            disabled={!exercises.length}
+            onClick={() => {
+              const used = new Set(rows.map((r) => r.exerciseId));
+              const next = exercises.find((e) => !used.has(e.id)) ?? exercises[0];
+              const last = rows[rows.length - 1];
+              setRows((r) => [...r, { exerciseId: next.id, sets: last?.sets ?? 3, reps: last?.reps ?? 10 }]);
+            }}
+          >
+            <IconPlus size={24} /> Add exercise
+          </Button>
+
+          {dirty && (
+            <div className="grid grid-cols-2 gap-1">
+              <Button variant="ghost" onClick={() => setRows(JSON.parse(serialized))} disabled={pending}>
+                Discard
+              </Button>
+              <Button
+                variant="primary"
+                disabled={pending || rows.some((r) => !(r.sets > 0) || !(r.reps > 0))}
+                onClick={() => start(() => savePlanDay(planId, weekday, rows))}
+              >
+                {pending ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          )}
         </div>
       )}
-
-      <div className="mt-3 flex items-center gap-2">
-        <Button
-          size="small"
-          variant="tertiary"
-          disabled={!exercises.length}
-          onClick={() => {
-            const used = new Set(rows.map((r) => r.exerciseId));
-            const next = exercises.find((e) => !used.has(e.id)) ?? exercises[0];
-            const last = rows[rows.length - 1];
-            setRows((r) => [...r, { exerciseId: next.id, sets: last?.sets ?? 3, reps: last?.reps ?? 10 }]);
-          }}
-        >
-          <IconPlus /> Add exercise
-        </Button>
-        <div className="flex-1" />
-        {dirty && (
-          <>
-            <Button size="small" variant="tertiary" onClick={() => setRows(JSON.parse(serialized))} disabled={pending}>
-              Discard
-            </Button>
-            <Button
-              size="small"
-              variant="primary"
-              disabled={pending || rows.some((r) => !(r.sets > 0) || !(r.reps > 0))}
-              onClick={() => start(() => savePlanDay(planId, weekday, rows))}
-            >
-              {pending ? "Saving…" : "Save"}
-            </Button>
-          </>
-        )}
-      </div>
     </Card>
+  );
+}
+
+function NumberField({ value, onChange, suffix }: { value: number; onChange: (n: number) => void; suffix: string }) {
+  return (
+    <label className="relative w-12">
+      <Input type="number" inputMode="numeric" min={1} className="w-12 pr-6 text-center" value={value} onChange={(e) => onChange(Number(e.target.value))} aria-label={suffix} />
+      <span className="pointer-events-none absolute top-0 right-2 flex h-6 items-center text-meta text-gray-900">{suffix}</span>
+    </label>
   );
 }

@@ -33,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense fallback={<TopNavView pathname="" />}>
           <TopNav />
         </Suspense>
-        <main className="mx-auto w-full max-w-5xl px-4 pt-6 pb-28 md:pb-12">{children}</main>
+        <main className="mx-auto w-full max-w-xl px-2 pt-3 pb-12">{children}</main>
         <Suspense fallback={<BottomNavView pathname="" />}>
           <BottomNav />
         </Suspense>

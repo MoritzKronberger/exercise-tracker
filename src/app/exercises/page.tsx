@@ -1,13 +1,13 @@
 import { Suspense } from "react";
 import { LibraryTabs } from "@/components/library-tabs";
-import { PageHeader, PageSkeleton } from "@/components/ui";
+import { PageSkeleton } from "@/components/ui";
 import { exerciseUsage, listExercises } from "@/lib/data";
 import { ExerciseList } from "./exercise-list";
 
 export default function ExercisesPage() {
   return (
     <>
-      <PageHeader title="Library" description="Exercises you can add to your workout plans." />
+      <h1 className="mb-2 text-display font-semibold tracking-tight">Plans</h1>
       <LibraryTabs active="exercises" />
       <Suspense fallback={<PageSkeleton />}>
         <Content />

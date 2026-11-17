@@ -1,22 +1,29 @@
 import Link from "next/link";
 import { cx } from "./ui";
 
-export function LibraryTabs({ active }: { active: "plans" | "exercises" }) {
-  const item = (href: string, key: string, label: string) => (
-    <Link
-      href={href}
-      className={cx(
-        "relative -mb-px border-b-2 px-1 pb-3 text-sm transition-colors",
-        active === key ? "border-gray-1000 text-gray-1000" : "border-transparent text-gray-900 hover:text-gray-1000",
-      )}
-    >
-      {label}
-    </Link>
-  );
+const tabs = [
+  { key: "plans", href: "/plans", label: "Plans" },
+  { key: "schedule", href: "/schedule", label: "Schedule" },
+  { key: "exercises", href: "/exercises", label: "Exercises" },
+] as const;
+
+/** Segmented control for the Plans area: 48px tall, equal thirds. */
+export function LibraryTabs({ active }: { active: (typeof tabs)[number]["key"] }) {
   return (
-    <div className="mb-6 flex gap-6 border-b border-gray-alpha-400">
-      {item("/plans", "plans", "Workout plans")}
-      {item("/exercises", "exercises", "Exercises")}
-    </div>
+    <nav className="mb-3 grid grid-cols-3 rounded-sm bg-gray-200">
+      {tabs.map((t) => (
+        <Link
+          key={t.key}
+          href={t.href}
+          replace
+          className={cx(
+            "flex h-6 items-center justify-center rounded-sm text-body font-medium",
+            active === t.key ? "bg-gray-1000 text-background-100" : "text-gray-900",
+          )}
+        >
+          {t.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
