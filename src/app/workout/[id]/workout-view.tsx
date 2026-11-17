@@ -406,6 +406,19 @@ function SetTiles({ ex, extra, onEdit }: { ex: Ex; extra: boolean; onEdit: (l: L
   );
 }
 
+/**
+ * "↑ from 60" / "↓ from 12" / "same as last" compare the pre-filled value with this set last time;
+ * once you change the value yourself it shows what was suggested instead.
+ */
+function changeHint(current: number | null, suggested: number | null, last: number | null) {
+  if (suggested == null) return null;
+  if (current != null && current !== suggested) return `suggested ${fmtWeight(suggested)}`;
+  if (last == null) return null;
+  if (suggested > last) return `↑ from ${fmtWeight(last)}`;
+  if (suggested < last) return `↓ from ${fmtWeight(last)}`;
+  return "same as last";
+}
+
 function SetInput({ ex, onLog }: { ex: Ex; onLog: (weight: number, reps: number) => void }) {
   const setNumber = ex.logs.length + 1;
   const range = { min: ex.minReps, max: ex.maxReps };
@@ -417,19 +430,10 @@ function SetInput({ ex, onLog }: { ex: Ex; onLog: (weight: number, reps: number)
   const r = Number(reps);
   const valid = weight.trim() !== "" && Number.isFinite(w) && w >= 0 && Number.isInteger(r) && r >= 0;
   const ends = valid ? rangeEnds(w, range, ex.weightStep) : null;
-  // Make clear the weight is already set: suggested by the rule, unchanged, or overridden by you.
-  const edited = s.weight != null && valid && w !== s.weight;
-  const hint = edited
-    ? `suggested ${fmtWeight(s.weight!)}`
-    : s.kind === "increase" && s.last
-      ? `↑ from ${fmtWeight(s.last.weight)}`
-      : s.kind === "decrease" && s.last
-        ? `↓ from ${fmtWeight(s.last.weight)}`
-        : s.kind === "new-set"
-          ? `from set ${setNumber - 1}`
-          : s.last
-            ? "same as last"
-            : null;
+  // Weight and reps are labelled by the same rule: pre-filled value vs. this set last time.
+  const r_ = Number.isInteger(r) ? r : null;
+  const weightHint = changeHint(valid ? w : null, s.weight, s.last?.weight ?? null) ?? (s.kind === "new-set" ? `from set ${setNumber - 1}` : null);
+  const repsHint = changeHint(r_, s.goal, s.last?.reps ?? null);
   return (
     <form
       id="set-input"
@@ -441,9 +445,9 @@ function SetInput({ ex, onLog }: { ex: Ex; onLog: (weight: number, reps: number)
     >
       <div>
         <RepRange min={ex.minReps} max={ex.maxReps} reps={Number.isInteger(r) ? r : null} last={s.last?.reps ?? null} weight={valid ? w : null} lower={ends?.lower ?? null} upper={ends?.upper ?? null} />
-        <Stepper label="Weight (kg)" hint={hint} value={weight} onChange={setWeight} step={ex.weightStep} decimal />
+        <Stepper label="Weight (kg)" hint={weightHint} value={weight} onChange={setWeight} step={ex.weightStep} decimal />
       </div>
-      <Stepper label="Reps" value={reps} onChange={setReps} step={1} />
+      <Stepper label="Reps" hint={repsHint} value={reps} onChange={setReps} step={1} />
     </form>
   );
 }
