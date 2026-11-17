@@ -25,7 +25,7 @@ export function WeightForm({ today, last }: { today: string; last: number | null
     >
       <input type="hidden" name="weight" value={weight.replace(",", ".")} />
       <Stepper
-        label="Weight (kg)"
+        label="kg"
         value={weight}
         onChange={(v) => {
           setWeight(v);

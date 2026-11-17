@@ -53,12 +53,15 @@ export function ProgressRings({ a, weekLabel }: { a: Adherence; weekLabel: strin
   const weekClosed = a.week.planned > 0 && a.week.done >= a.week.planned;
   const outer = SIZE / 2 - STROKE / 2;
   const inner = outer - STROKE - GAP;
-  const rows: { color: string; label: string; value: string; shape: "ring" | "dot" }[] = [
+  type LegendRow = { color: string; label: string; value: string; shape: "ring" | "dot" };
+  const allRows: LegendRow[] = [
     { color: WEEK, label: weekClosed ? "Week closed ✓" : "This week", value: `${a.week.done}/${a.week.planned}`, shape: "ring" },
     { color: ON_TIME, label: "On time", value: String(a.onTime), shape: "dot" },
     { color: LATE, label: "Late", value: String(a.late), shape: "dot" },
     { color: SKIPPED, label: "Skipped", value: String(a.skipped), shape: "dot" },
   ];
+  // Late / skipped only appear once they happen.
+  const rows = allRows.filter((r) => r.shape === "ring" || r.label === "On time" || r.value !== "0");
 
   return (
     <Card className="flex items-center gap-2 p-2">

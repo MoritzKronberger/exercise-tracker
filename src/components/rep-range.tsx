@@ -72,7 +72,6 @@ export function RepRange({
             <span className="size-[12px] rounded-full ring-2 ring-gray-700 ring-inset" /> last time
           </span>
         )}
-        <span>ends: next session</span>
       </p>
     </div>
   );

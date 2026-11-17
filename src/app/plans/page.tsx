@@ -11,7 +11,7 @@ import { userToday } from "@/lib/server";
 export default function PlansPage() {
   return (
     <>
-      <h1 className="mb-2 text-display font-semibold tracking-tight">Plans</h1>
+      <h1 className="sr-only">Plans</h1>
       <LibraryTabs active="plans" />
       <Suspense fallback={<PageSkeleton />}>
         <Content />

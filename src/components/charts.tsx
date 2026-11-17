@@ -4,7 +4,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ReferenceArea,
@@ -163,24 +162,6 @@ export function TimeBars({
         <Tooltip content={(p) => <TooltipBox {...p} unit={unit} digits={0} />} cursor={{ fill: "var(--ds-gray-alpha-100)" }} />
         <Bar dataKey="value" name={name} fill="var(--viz-1)" radius={[4, 4, 0, 0]} maxBarSize={barWidth ?? 18} isAnimationActive={false} />
       </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-/** Two series in the same unit (kg): top-set weight and estimated 1RM. */
-export function ProgressLines({ data, height = 240 }: { data: { date: string; top: number; e1rm: number }[]; height?: number }) {
-  const points = data.map((d) => ({ ts: toTs(d.date), top: d.top, e1rm: Math.round(d.e1rm * 10) / 10 }));
-  return (
-    <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={points} margin={{ top: 16, right: 8, bottom: 0, left: -12 }}>
-        <CartesianGrid vertical={false} stroke="var(--viz-grid)" />
-        <XAxis dataKey="ts" type="number" scale="time" domain={domainFor(points.map((p) => p.ts))} tickFormatter={fmtTick} {...axis} minTickGap={24} />
-        <YAxis domain={[(min: number) => Math.max(0, Math.floor((min - 5) / 5) * 5), (max: number) => Math.ceil((max + 5) / 5) * 5]} allowDecimals={false} tickFormatter={(v) => String(Math.round(v))} {...axis} width={44} />
-        <Tooltip content={(p) => <TooltipBox {...p} unit="kg" />} cursor={{ stroke: "var(--ds-gray-500)" }} />
-        <Legend verticalAlign="top" align="left" height={32} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 14, color: "var(--ds-gray-900)", paddingLeft: 40 }} />
-        <Line dataKey="top" name="Top set" stroke="var(--viz-1)" strokeWidth={2} dot={{ r: 3, strokeWidth: 2, stroke: "var(--ds-background-100)", fill: "var(--viz-1)" }} isAnimationActive={false} />
-        <Line dataKey="e1rm" name="Est. 1RM" stroke="var(--viz-2)" strokeWidth={2} strokeDasharray="4 3" dot={{ r: 3, strokeWidth: 2, stroke: "var(--ds-background-100)", fill: "var(--viz-2)" }} isAnimationActive={false} />
-      </LineChart>
     </ResponsiveContainer>
   );
 }

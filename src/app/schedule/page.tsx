@@ -12,7 +12,7 @@ import { DeleteScheduleButton, WeeksField } from "./schedule-client";
 export default function SchedulePage({ searchParams }: PageProps<"/schedule">) {
   return (
     <>
-      <h1 className="mb-2 text-display font-semibold tracking-tight">Plans</h1>
+      <h1 className="sr-only">Plans</h1>
       <LibraryTabs active="schedule" />
       <Suspense fallback={<PageSkeleton />}>
         <Content searchParams={searchParams} />

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { BandLegend, TimeBars, TimeLine, type Band } from "@/components/charts";
+import { BandLegend, TimeBars, type Band } from "@/components/charts";
 import { Card, EmptyState, LinkButton, More, PageSkeleton, SectionTitle, Stat, cx } from "@/components/ui";
 import { formatDate, startOfWeek, toTs } from "@/lib/dates";
-import { exerciseProgress, listBodyWeights, listExercises, listSchedules, sessionSummaries } from "@/lib/data";
+import { exerciseProgress, listExercises, listSchedules, sessionSummaries } from "@/lib/data";
 import { fmtVolume } from "@/lib/format";
 import { ExerciseProgress } from "./exercise-progress";
 
@@ -22,15 +22,14 @@ const DAY = 86_400_000;
 
 async function Content({ searchParams }: { searchParams: PageProps<"/stats">["searchParams"] }) {
   const sp = await searchParams;
-  const [summariesAll, schedules, weights, progress, exercises] = await Promise.all([
+  const [summariesAll, schedules, progress, exercises] = await Promise.all([
     sessionSummaries(),
     listSchedules(),
-    listBodyWeights(),
     exerciseProgress(),
     listExercises(true),
   ]);
 
-  if (!summariesAll.some((s) => s.sets > 0) && !weights.length) {
+  if (!summariesAll.some((s) => s.sets > 0)) {
     return <EmptyState title="No data yet" description="Finish a workout to see stats." action={<LinkButton href="/" className="w-full">Go to today</LinkButton>} />;
   }
 
@@ -39,13 +38,12 @@ async function Content({ searchParams }: { searchParams: PageProps<"/stats">["se
   const to = block?.endDate ?? "9999-12-31";
   const inRange = (d: string) => d >= from && d <= to;
   const summaries = summariesAll.filter((s) => s.sets > 0 && inRange(s.date));
-  const weightsInRange = weights.filter((w) => inRange(w.date));
 
   const weekly = new Map<string, number>();
   for (const s of summaries) weekly.set(startOfWeek(s.date), (weekly.get(startOfWeek(s.date)) ?? 0) + s.volume);
   const weeklyData = [...weekly.entries()].sort().map(([date, value]) => ({ date, value }));
 
-  const allTs = [...summaries.map((s) => toTs(s.date)), ...weightsInRange.map((w) => toTs(w.date))];
+  const allTs = summaries.map((s) => toTs(s.date));
   const domain: [number, number] | undefined = block
     ? [toTs(block.startDate) - DAY, toTs(block.endDate) + 2 * DAY]
     : allTs.length
@@ -90,22 +88,13 @@ async function Content({ searchParams }: { searchParams: PageProps<"/stats">["se
           <SectionTitle>Volume per week</SectionTitle>
           <Card className="p-2">
             <TimeBars data={weeklyData} name="Volume" unit="kg" bands={bands} domain={domain} height={160} barWidth={24} />
-          </Card>
-        </section>
-      )}
-
-      {weightsInRange.length > 0 && (
-        <section>
-          <SectionTitle>Body weight</SectionTitle>
-          <Card className="p-2">
-            <TimeLine data={weightsInRange.map((w) => ({ date: w.date, value: w.weight }))} name="Body weight" unit="kg" bands={bands} domain={domain} height={160} />
             <BandLegend bands={bands} />
           </Card>
         </section>
       )}
 
       {summaries.length > 0 && (
-        <More label={`History (${summaries.length} workouts)`}>
+        <More label="History">
           <Card className="overflow-hidden">
             {summaries.map((s) => (
               <Link key={s.id} href={`/workout/${s.id}`} className="flex min-h-7 items-center gap-2 px-2 active:bg-gray-alpha-100 [&:not(:first-child)]:border-t [&:not(:first-child)]:border-gray-alpha-400">

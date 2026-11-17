@@ -48,7 +48,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
     <DaySwiper prev={addDays(date, -1)} next={addDays(date, 1)}>
       <div className="mb-2 flex items-end justify-between gap-2">
         <div>
-          <p className="text-meta text-gray-900">{formatDate(date, { day: "numeric", month: "long" })}</p>
+          <p className="text-meta text-gray-900">{formatDate(date, { month: "long" })}</p>
           <h1 className="text-display font-semibold tracking-tight">{title}</h1>
         </div>
         <div className="flex gap-1">
@@ -108,17 +108,20 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
 
       {adherence && block && (
         <div className="mb-2">
-          <ProgressRings a={adherence} weekLabel={`Block · ${adherence.onTime + adherence.late} of ${adherence.total} done`} />
+          <ProgressRings a={adherence} weekLabel={`Block ${adherence.onTime + adherence.late}/${adherence.total}`} />
         </div>
       )}
 
       <div className="flex flex-col gap-2">
         {day.workouts.length === 0 && freestyle.length === 0 && (
-          <EmptyState title="Rest day" description="Nothing planned." action={<StartButton date={date} scheduleId={null} label="Start empty workout" variant="secondary" size="lg" />} />
+          <EmptyState title="Rest day" action={<StartButton date={date} scheduleId={null} label="Start empty workout" variant="secondary" size="lg" />} />
         )}
 
         {day.workouts.map((w) => {
           const session = day.sessions.find((s) => s.scheduleId === w.schedule.id);
+          // Say "2 × 6–12" once when every exercise shares it, instead of on every row.
+          const scheme = (i: (typeof w.items)[number]) => `${i.sets} × ${i.minReps}–${i.maxReps}`;
+          const uniform = new Set(w.items.map(scheme)).size === 1 ? scheme(w.items[0]) : null;
           return (
             <Card key={w.schedule.id}>
               <Row className="min-h-8">
@@ -126,6 +129,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
                   <p className="truncate text-title font-semibold tracking-tight">{w.schedule.planName}</p>
                   <p className="text-meta text-gray-900">
                     Week {w.week} of {w.schedule.weeks}
+                    {uniform && ` · ${uniform}`}
                   </p>
                 </div>
                 {session?.finishedAt ? <Badge color="green">Done</Badge> : session ? <Badge color="amber">Started</Badge> : null}
@@ -134,9 +138,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
                 {w.items.map((i) => (
                   <li key={i.id} className="flex min-h-6 items-center gap-2 px-2">
                     <span className="min-w-0 flex-1 text-body">{i.exerciseName}</span>
-                    <span className="tabular text-body text-gray-900">
-                      {i.sets} × {i.minReps}–{i.maxReps}
-                    </span>
+                    {!uniform && <span className="tabular text-body text-gray-900">{scheme(i)}</span>}
                   </li>
                 ))}
               </ul>

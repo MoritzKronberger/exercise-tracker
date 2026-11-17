@@ -259,7 +259,6 @@ function FocusView({ data }: { data: WorkoutData }) {
 
           <SetTiles ex={ex} extra={extraFor === ex.exerciseId && ex.logs.length >= ex.targetSets} onEdit={setEditing} />
 
-          {exDone && <p className="text-body text-gray-900">All {ex.targetSets} sets done.</p>}
 
           {!exDone && <SetInput key={`${ex.exerciseId}-${ex.logs.length}`} ex={ex} onLog={log} />}
         </div>
@@ -283,7 +282,7 @@ function FocusView({ data }: { data: WorkoutData }) {
             )
           ) : (
             <Button variant="primary" size="xl" className="flex-1" form="set-input" type="submit">
-              <IconCheck size={24} /> Log set {ex.logs.length + 1}
+              <IconCheck size={24} /> Log set
             </Button>
           )}
           <Button variant="secondary" size="xl" className="w-8 px-0" onClick={() => go(1)} disabled={idx === exercises.length - 1} aria-label="Next exercise">
@@ -421,13 +420,13 @@ function SetInput({ ex, onLog }: { ex: Ex; onLog: (weight: number, reps: number)
   // Make clear the weight is already set: suggested by the rule, unchanged, or overridden by you.
   const edited = s.weight != null && valid && w !== s.weight;
   const hint = edited
-    ? `changed · suggested ${fmtWeight(s.weight!)}`
+    ? `suggested ${fmtWeight(s.weight!)}`
     : s.kind === "increase" && s.last
-      ? `↑ suggested · was ${fmtWeight(s.last.weight)}`
+      ? `↑ from ${fmtWeight(s.last.weight)}`
       : s.kind === "decrease" && s.last
-        ? `↓ suggested · was ${fmtWeight(s.last.weight)}`
+        ? `↓ from ${fmtWeight(s.last.weight)}`
         : s.kind === "new-set"
-          ? `suggested · from set ${setNumber - 1}`
+          ? `from set ${setNumber - 1}`
           : s.last
             ? "same as last"
             : null;
@@ -444,7 +443,7 @@ function SetInput({ ex, onLog }: { ex: Ex; onLog: (weight: number, reps: number)
         <RepRange min={ex.minReps} max={ex.maxReps} reps={Number.isInteger(r) ? r : null} last={s.last?.reps ?? null} weight={valid ? w : null} lower={ends?.lower ?? null} upper={ends?.upper ?? null} />
         <Stepper label="Weight (kg)" hint={hint} value={weight} onChange={setWeight} step={ex.weightStep} decimal />
       </div>
-      <Stepper label="Reps" hint={s.last ? `last ${s.last.reps}` : null} value={reps} onChange={setReps} step={1} />
+      <Stepper label="Reps" value={reps} onChange={setReps} step={1} />
     </form>
   );
 }
