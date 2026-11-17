@@ -16,7 +16,7 @@ import { ActionBar, Button, Card, EmptyState, Select, cx } from "@/components/ui
 import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconX } from "@/components/icons";
 import { Stepper } from "@/components/stepper";
 import { formatDate } from "@/lib/dates";
-import { fmtDuration, fmtVolume, fmtWeight } from "@/lib/format";
+import { fmtDuration, fmtWeight } from "@/lib/format";
 
 type Log = { id: number; setNumber: number; weight: number; reps: number; restSeconds: number | null; completedAt: string; pending?: boolean };
 type PrevSet = { setNumber: number; weight: number; reps: number };
@@ -537,7 +537,7 @@ function FinishedView({ data }: { data: WorkoutData }) {
       <h1 className="mb-2 text-display font-semibold tracking-tight">{data.title}</h1>
 
       <div className="mb-3 grid grid-cols-3 gap-1">
-        <Tile label="Volume" value={fmtVolume(volume)} />
+        <Tile label="Volume (kg)" value={Math.round(volume).toLocaleString("en-US")} />
         <Tile label="vs last" value={delta == null ? "–" : `${delta >= 0 ? "+" : ""}${delta.toFixed(0)}%`} tone={delta == null ? undefined : delta >= 0 ? "good" : "bad"} />
         <Tile label="Time" value={fmtDuration(Math.max(0, duration))} />
       </div>
@@ -577,7 +577,7 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: "go
   return (
     <Card className="p-2">
       <p className="text-meta text-gray-900">{label}</p>
-      <p className={cx("tabular text-title font-semibold tracking-tight", tone === "good" && "text-green-900", tone === "bad" && "text-red-900")}>{value}</p>
+      <p className={cx("tabular text-title font-semibold tracking-tight whitespace-nowrap", tone === "good" && "text-green-900", tone === "bad" && "text-red-900")}>{value}</p>
     </Card>
   );
 }
