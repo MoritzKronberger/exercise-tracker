@@ -118,9 +118,9 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
                   const last = progress.get(i.exerciseId)?.filter((p) => p.date < date).at(-1);
                   return (
                     <li key={i.id} className="flex items-center gap-3 px-4 py-2.5">
-                      <span className="min-w-0 flex-1 truncate text-sm">{i.exerciseName}</span>
-                      {last && <span className="tabular text-xs text-gray-900">last {fmtKg(last.topWeight)}</span>}
-                      <span className="tabular w-14 text-right text-sm font-medium">
+                      <span className="min-w-0 flex-1 text-sm leading-snug">{i.exerciseName}</span>
+                      {last && <span className="tabular shrink-0 text-xs text-gray-900">last {fmtKg(last.topWeight)}</span>}
+                      <span className="tabular w-12 shrink-0 text-right text-sm font-medium">
                         {i.sets} × {i.reps}
                       </span>
                     </li>

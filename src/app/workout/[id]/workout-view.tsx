@@ -104,8 +104,8 @@ export function WorkoutView({ data }: { data: WorkoutData }) {
   };
 
   return (
-    <div className={cx("mx-auto max-w-xl", !finished && "pb-32")}>
-      <Link href={`/?date=${data.date}`} className="mb-3 inline-flex items-center gap-1 text-sm text-gray-900 hover:text-gray-1000">
+    <div className="mx-auto max-w-xl">
+      <Link href={`/?date=${data.date}`} className="-my-2 mb-1 inline-flex items-center gap-1 py-2 text-sm text-gray-900 hover:text-gray-1000">
         <IconChevronLeft /> {formatDate(data.date, { weekday: "long", day: "numeric", month: "short" })}
       </Link>
 
@@ -119,11 +119,13 @@ export function WorkoutView({ data }: { data: WorkoutData }) {
         {finished ? <Badge color="green">Completed</Badge> : null}
       </div>
 
+      {!finished && lastLog && <RestTimer since={lastLog.completedAt} target={lastLog.exercise.restSeconds} now={now} />}
+
       {finished && <Summary data={data} exercises={exercises} totalVolume={totalVolume} elapsed={elapsed} />}
 
       <div className="flex flex-col gap-4">
         {exercises.map((e) => (
-          <ExerciseCard key={e.sessionExerciseId} ex={e} onLog={handleLog} />
+          <ExerciseCard key={e.sessionExerciseId} ex={e} onLog={handleLog} finished={finished} />
         ))}
       </div>
 
@@ -154,7 +156,6 @@ export function WorkoutView({ data }: { data: WorkoutData }) {
         </Button>
       </div>
 
-      {!finished && lastLog && <RestTimer since={lastLog.completedAt} target={lastLog.exercise.restSeconds} now={now} />}
     </div>
   );
 }
@@ -194,7 +195,7 @@ function Summary({ data, exercises, totalVolume, elapsed }: { data: WorkoutData;
   );
 }
 
-function ExerciseCard({ ex, onLog }: { ex: Ex; onLog: (exerciseId: number, weight: number, reps: number) => void }) {
+function ExerciseCard({ ex, onLog, finished }: { ex: Ex; onLog: (exerciseId: number, weight: number, reps: number) => void; finished: boolean }) {
   const [extraSlots, setExtraSlots] = useState(0);
   const [pending, start] = useTransition();
   const rowCount = Math.max(ex.targetSets + extraSlots, ex.logs.length);
@@ -255,7 +256,7 @@ function ExerciseCard({ ex, onLog }: { ex: Ex; onLog: (exerciseId: number, weigh
           const log = ex.logs[i];
           const prev = prevSet(i + 1);
           if (log) return <LoggedRow key={`l${log.id}`} index={i} log={log} prev={prev} targetReps={ex.targetReps} />;
-          if (i === nextIndex)
+          if (i === nextIndex && (!finished || extraSlots > 0))
             return (
               <SetInput
                 key={`in-${ex.logs.length}`}
@@ -319,7 +320,7 @@ function LoggedRow({ index, log, prev, targetReps }: { index: number; log: Log; 
       <div className="col-span-2 grid grid-cols-subgrid items-center border-t border-gray-alpha-200 bg-gray-alpha-100 py-2">
         <span className="tabular text-center text-xs text-gray-900">{index + 1}</span>
         <form
-          className="flex items-center gap-2 pr-3"
+          className="flex min-w-0 flex-col gap-2 pr-3"
           onSubmit={(e) => {
             e.preventDefault();
             start(async () => {
@@ -328,26 +329,23 @@ function LoggedRow({ index, log, prev, targetReps }: { index: number; log: Log; 
             });
           }}
         >
-          <Input className="h-9 w-20 text-center" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} aria-label="Weight" />
-          <span className="text-xs text-gray-900">kg ×</span>
-          <Input className="h-9 w-16 text-center" inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} aria-label="Reps" />
-          <div className="flex-1" />
-          <Button size="small" variant="primary" type="submit" disabled={pending} aria-label="Save">
-            <IconCheck />
-          </Button>
-          <Button
-            size="small"
-            variant="tertiary"
-            type="button"
-            disabled={pending}
-            aria-label="Delete set"
-            onClick={() => start(() => deleteSet(log.id))}
-          >
-            <IconTrash />
-          </Button>
-          <Button size="small" variant="tertiary" type="button" onClick={() => setEditing(false)} aria-label="Cancel">
-            <IconX />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Input className="h-10 min-w-0 flex-1 text-center" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} aria-label="Weight" autoFocus />
+            <span className="shrink-0 text-xs text-gray-900">kg ×</span>
+            <Input className="h-10 min-w-0 flex-1 text-center" inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} aria-label="Reps" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="small" variant="tertiary" type="button" className="-ml-2.5 text-red-900" disabled={pending} onClick={() => start(() => deleteSet(log.id))}>
+              <IconTrash /> Delete
+            </Button>
+            <div className="flex-1" />
+            <Button size="small" variant="tertiary" type="button" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+            <Button size="small" variant="primary" type="submit" disabled={pending}>
+              <IconCheck /> Save
+            </Button>
+          </div>
         </form>
       </div>
     );
@@ -397,14 +395,14 @@ function Stepper({
   onChange,
   step,
   label,
-  unit,
+  caption,
   decimal,
 }: {
   value: string;
   onChange: (v: string) => void;
   step: number;
   label: string;
-  unit: string;
+  caption: string;
   decimal?: boolean;
 }) {
   const bump = (d: number) => {
@@ -412,10 +410,10 @@ function Stepper({
     onChange(String(Math.max(0, Math.round((n + d) * 100) / 100)));
   };
   return (
-    <div className="flex flex-1 flex-col gap-1">
-      <span className="text-[11px] text-gray-900">{label}</span>
+    <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <span className="text-[11px] text-gray-900">{caption}</span>
       <div className="flex h-11 items-stretch overflow-hidden rounded-md bg-background-100 shadow-border">
-        <button type="button" className="w-10 text-lg text-gray-900 hover:bg-gray-alpha-100 active:bg-gray-alpha-200" onClick={() => bump(-step)} aria-label={`Decrease ${label}`}>
+        <button type="button" className="w-8 shrink-0 text-lg text-gray-900 min-[360px]:w-10 hover:bg-gray-alpha-100 active:bg-gray-alpha-200" onClick={() => bump(-step)} aria-label={`Decrease ${label}`}>
           −
         </button>
         <div className="relative flex flex-1 items-center">
@@ -428,9 +426,8 @@ function Stepper({
             aria-label={label}
             placeholder="0"
           />
-          <span className="pointer-events-none absolute right-1.5 text-[10px] text-gray-700">{unit}</span>
         </div>
-        <button type="button" className="w-10 text-lg text-gray-900 hover:bg-gray-alpha-100 active:bg-gray-alpha-200" onClick={() => bump(step)} aria-label={`Increase ${label}`}>
+        <button type="button" className="w-8 shrink-0 text-lg text-gray-900 min-[360px]:w-10 hover:bg-gray-alpha-100 active:bg-gray-alpha-200" onClick={() => bump(step)} aria-label={`Increase ${label}`}>
           +
         </button>
       </div>
@@ -468,8 +465,8 @@ function SetInput({
       <span className="tabular grid place-items-center self-center text-xs font-semibold text-blue-900">{index + 1}</span>
       <div className="flex flex-col gap-2 pr-3">
         <div className="flex gap-2">
-          <Stepper label="Weight" unit="kg" value={weight} onChange={setWeight} step={2.5} decimal />
-          <Stepper label="Reps" unit="" value={reps} onChange={setReps} step={1} />
+          <Stepper label="Weight" caption="Weight (kg)" value={weight} onChange={setWeight} step={2.5} decimal />
+          <Stepper label="Reps" caption="Reps" value={reps} onChange={setReps} step={1} />
         </div>
         <div className="flex items-center gap-2">
           <span className="tabular flex-1 text-xs text-gray-900">{prev ? `Last time: ${fmtWeight(prev.weight)} kg × ${prev.reps}` : "No previous data for this set"}</span>
@@ -500,12 +497,12 @@ function RestTimer({ since, target, now }: { since: string; target: number | nul
   const pct = target ? Math.min(100, (elapsed / target) * 100) : 0;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(56px+env(safe-area-inset-bottom))] z-30 px-4 pb-3 md:bottom-4">
-      <div className="pointer-events-auto mx-auto max-w-xl overflow-hidden rounded-xl bg-gray-1000 text-background-100 shadow-menu">
-        <div className="flex items-center gap-3 px-4 py-3">
+    <div className="sticky top-[64px] z-30 mb-4">
+      <div className="overflow-hidden rounded-xl bg-gray-1000 text-background-100 shadow-menu">
+        <div className="flex items-center gap-2.5 px-4 py-2.5">
           <IconClock />
           <span className="text-sm opacity-80">Rest</span>
-          <span className={cx("tabular text-2xl font-semibold tracking-tight", over && "text-green-700")}>{fmtDuration(elapsed)}</span>
+          <span className={cx("tabular text-xl font-semibold tracking-tight", over && "text-green-700")}>{fmtDuration(elapsed)}</span>
           <span className="flex-1" />
           {target != null && <span className="tabular text-sm opacity-70">{over ? "Go!" : `target ${fmtDuration(target)}`}</span>}
         </div>

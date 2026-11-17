@@ -58,14 +58,14 @@ export function ExerciseProgress({ exercises }: { exercises: Item[] }) {
       </Card>
 
       <Card className="overflow-x-auto">
-        <table className="w-full min-w-[520px] text-sm">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-alpha-400 text-left text-xs text-gray-900">
               <th className="px-4 py-2 font-medium">Exercise</th>
-              <th className="px-2 py-2 text-right font-medium">Sessions</th>
-              <th className="px-2 py-2 text-right font-medium">Last top set</th>
-              <th className="px-2 py-2 text-right font-medium">Best e1RM</th>
-              <th className="px-2 py-2 text-right font-medium">Volume</th>
+              <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Sessions</th>
+              <th className="px-2 py-2 text-right font-medium whitespace-nowrap">Last top set</th>
+              <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Best e1RM</th>
+              <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Volume</th>
               <th className="px-4 py-2 text-right font-medium">Change</th>
             </tr>
           </thead>
@@ -80,12 +80,12 @@ export function ExerciseProgress({ exercises }: { exercises: Item[] }) {
                   className={cx("cursor-pointer border-b border-gray-alpha-200 last:border-0 hover:bg-gray-alpha-100", e.id === selected && "bg-gray-alpha-100")}
                 >
                   <td className="px-4 py-2.5 font-medium">{e.name}</td>
-                  <td className="px-2 py-2.5 text-right">{e.points.length}</td>
-                  <td className="px-2 py-2.5 text-right">
+                  <td className="hidden px-2 py-2.5 text-right sm:table-cell">{e.points.length}</td>
+                  <td className="px-2 py-2.5 text-right whitespace-nowrap">
                     {fmtWeight(last.topWeight)} × {last.topReps}
                   </td>
-                  <td className="px-2 py-2.5 text-right">{fmtWeight(Math.max(...e.points.map((p) => p.bestE1rm)))}</td>
-                  <td className="px-2 py-2.5 text-right">{fmtVolume(e.points.reduce((n, p) => n + p.volume, 0))}</td>
+                  <td className="hidden px-2 py-2.5 text-right sm:table-cell">{fmtWeight(Math.max(...e.points.map((p) => p.bestE1rm)))}</td>
+                  <td className="hidden px-2 py-2.5 text-right sm:table-cell">{fmtVolume(e.points.reduce((n, p) => n + p.volume, 0))}</td>
                   <td className={cx("px-4 py-2.5 text-right", c == null ? "text-gray-700" : c >= 0 ? "text-green-900" : "text-red-900")}>
                     {c == null ? "–" : `${c >= 0 ? "+" : ""}${c.toFixed(1)}%`}
                   </td>

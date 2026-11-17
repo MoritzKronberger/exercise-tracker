@@ -103,7 +103,7 @@ function ExerciseRow({ row }: { row: Row }) {
   return (
     <div className="flex items-center gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{row.name}</p>
+        <p className="text-sm leading-snug font-medium break-words">{row.name}</p>
         <p className="text-xs text-gray-900">
           {row.restSeconds ? `Rest ${row.restSeconds}s` : "No rest target"} · {row.loggedSets} sets logged
         </p>

@@ -20,7 +20,7 @@ export function WeeksField() {
               key={w}
               onClick={() => setWeeks(w)}
               className={cx(
-                "h-9 rounded px-3 text-sm font-medium transition-colors",
+                "h-9 rounded px-2.5 text-sm font-medium whitespace-nowrap transition-colors",
                 weeks === w ? "bg-gray-1000 text-background-100" : "text-gray-1000 hover:bg-gray-alpha-100",
               )}
             >
@@ -36,7 +36,7 @@ export function WeeksField() {
           max={104}
           value={weeks}
           onChange={(e) => setWeeks(Number(e.target.value))}
-          className="w-20 text-center"
+          className="w-16 text-center"
           aria-label="Weeks"
         />
       </div>

@@ -62,18 +62,37 @@ function domainFor(dates: number[], bands: Band[] = []) {
   return [min - DAY, max + DAY] as [number, number];
 }
 
+/** Consecutive blocks alternate between two tints so neighbours stay distinguishable. */
+function bandFill(bands: Band[], b: Band) {
+  const order = [...bands].sort((x, y) => x.from.localeCompare(y.from));
+  return order.findIndex((x) => x.id === b.id) % 2 === 0 ? "var(--viz-band)" : "var(--viz-band-2)";
+}
+
 function Bands({ bands }: { bands: Band[] }) {
   return bands.map((b) => (
-    <ReferenceArea
-      key={b.id}
-      x1={toTs(b.from)}
-      x2={toTs(b.to) + DAY}
-      fill="var(--viz-band)"
-      fillOpacity={1}
-      ifOverflow="hidden"
-      label={{ value: b.label, position: "insideTopLeft", fontSize: 10, fill: "var(--ds-gray-900)" }}
-    />
+    <ReferenceArea key={b.id} x1={toTs(b.from)} x2={toTs(b.to) + DAY} fill={bandFill(bands, b)} fillOpacity={1} ifOverflow="hidden" />
   ));
+}
+
+/** Names the shaded training blocks (kept out of the plot so labels never collide with data). */
+export function BandLegend({ bands }: { bands: Band[] }) {
+  if (!bands.length) return null;
+  const fmt = (d: string) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(toTs(d));
+  return (
+    <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-900">
+      {[...bands]
+        .sort((x, y) => x.from.localeCompare(y.from))
+        .map((b) => (
+          <li key={b.id} className="flex items-center gap-1.5">
+            <span className="size-3 rounded-sm shadow-border" style={{ background: bandFill(bands, b) }} />
+            <span className="font-medium text-gray-1000">{b.label}</span>
+            <span className="tabular">
+              {fmt(b.from)} – {fmt(b.to)}
+            </span>
+          </li>
+        ))}
+    </ul>
+  );
 }
 
 /** Single-series time line (e.g. body weight), optionally with shaded plan periods. */

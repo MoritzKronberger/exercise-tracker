@@ -1,10 +1,9 @@
 import { Suspense } from "react";
 import { saveBodyWeight } from "@/app/actions";
-import { TimeLine } from "@/components/charts";
+import { BandLegend, TimeLine } from "@/components/charts";
 import { Button, Card, EmptyState, Input, PageHeader, PageSkeleton, Stat } from "@/components/ui";
 import { addDays, formatDate } from "@/lib/dates";
 import { listBodyWeights, listSchedules } from "@/lib/data";
-import { fmtKg } from "@/lib/format";
 import { userToday } from "@/lib/server";
 import { WeightRow } from "./weight-row";
 
@@ -33,6 +32,12 @@ async function Content() {
   const bands = schedules.map((s) => ({ id: s.id, from: s.startDate, to: s.endDate, label: s.planName }));
   const firstDate = first?.date;
   const visibleBands = firstDate ? bands.filter((b) => b.to >= firstDate && b.from <= today) : [];
+  const rows = [...entries].reverse().map((e, i, arr) => ({
+    id: e.id,
+    date: formatDate(e.date, e.date.slice(0, 4) === today.slice(0, 4) ? { weekday: "short", day: "numeric", month: "short" } : { day: "numeric", month: "short", year: "numeric" }),
+    weight: e.weight,
+    delta: arr[i + 1] ? e.weight - arr[i + 1].weight : null,
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,23 +71,39 @@ async function Content() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Latest" value={fmtKg(latest!.weight)} hint={formatDate(latest!.date)} />
-            <Stat label="7-day average" value={fmtKg(avg7)} hint={avg7 && avgPrev7 ? `${avg7 - avgPrev7 >= 0 ? "+" : ""}${(avg7 - avgPrev7).toFixed(1)} kg vs prior week` : undefined} />
+            <Stat label="Latest" value={`${latest!.weight.toFixed(1)} kg`} hint={formatDate(latest!.date)} />
+            <Stat label="7-day average" value={avg7 == null ? "–" : `${avg7.toFixed(1)} kg`} hint={avg7 && avgPrev7 ? `${avg7 - avgPrev7 >= 0 ? "+" : ""}${(avg7 - avgPrev7).toFixed(1)} kg vs prior week` : undefined} />
             <Stat label="Change since start" value={`${latest!.weight - first.weight >= 0 ? "+" : ""}${(latest!.weight - first.weight).toFixed(1)} kg`} hint={`since ${formatDate(first.date)}`} />
             <Stat label="Entries" value={entries.length} />
           </div>
 
           <Card className="p-4">
             <h2 className="text-sm font-medium">Body weight (kg)</h2>
-            <p className="mb-2 text-xs text-gray-900">Shaded areas are scheduled training blocks.</p>
+            <p className="mb-2 text-xs text-gray-900">Shaded areas are training blocks.</p>
             <TimeLine data={entries.map((e) => ({ date: e.date, value: e.weight }))} name="Body weight" unit="kg" bands={visibleBands} />
+            <BandLegend bands={visibleBands} />
           </Card>
 
-          <Card className="divide-y divide-gray-alpha-400">
-            {[...entries].reverse().map((e, i, arr) => (
-              <WeightRow key={e.id} id={e.id} date={formatDate(e.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} weight={e.weight} delta={arr[i + 1] ? e.weight - arr[i + 1].weight : null} />
-            ))}
-          </Card>
+          <section>
+            <h2 className="mb-3 font-medium">Entries</h2>
+            <Card className="divide-y divide-gray-alpha-400">
+              {rows.slice(0, 14).map((r) => (
+                <WeightRow key={r.id} {...r} />
+              ))}
+            </Card>
+            {rows.length > 14 && (
+              <details className="group mt-3">
+                <summary className="cursor-pointer list-none py-2 text-center text-sm font-medium text-gray-900 hover:text-gray-1000 group-open:hidden">
+                  Show all {rows.length} entries
+                </summary>
+                <Card className="divide-y divide-gray-alpha-400">
+                  {rows.slice(14).map((r) => (
+                    <WeightRow key={r.id} {...r} />
+                  ))}
+                </Card>
+              </details>
+            )}
+          </section>
         </>
       )}
     </div>

@@ -37,6 +37,7 @@
   --viz-1: #2a78d6;
   --viz-2: #eb6834;
   --viz-band: rgb(42 120 214 / 0.08);
+  --viz-band-2: rgb(235 104 52 / 0.08);
   --viz-grid: #ebebeb;
   color-scheme: light;
 }
@@ -78,6 +79,7 @@
     --viz-1: #3987e5;
     --viz-2: #d95926;
     --viz-band: rgb(57 135 229 / 0.12);
+    --viz-band-2: rgb(217 89 38 / 0.12);
     --viz-grid: #262626;
     color-scheme: dark;
   }

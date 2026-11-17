@@ -16,7 +16,7 @@ export function PlanEditor({ plan, items, exercises }: { plan: { id: number; nam
 
   return (
     <div>
-      <Link href="/plans" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-900 hover:text-gray-1000">
+      <Link href="/plans" className="-my-2 mb-2 inline-flex items-center gap-1 py-2 text-sm text-gray-900 hover:text-gray-1000">
         <IconChevronLeft /> Plans
       </Link>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -113,11 +113,14 @@ function DayEditor({
   return (
     <Card className={cx("p-4", dirty && "shadow-[0_0_0_1px_var(--ds-blue-700)]")}>
       <div className="flex items-center gap-2">
-        <h2 className="flex-1 font-medium">{label}</h2>
-        {rows.length === 0 && <span className="text-sm whitespace-nowrap text-gray-900">Rest day</span>}
+        <h2 className="flex-1 font-medium">
+          {label}
+          {rows.length === 0 && otherDays.length > 0 && <span className="ml-2 text-sm font-normal text-gray-900 sm:hidden">Rest</span>}
+        </h2>
+        {rows.length === 0 && <span className={cx("text-sm whitespace-nowrap text-gray-900", otherDays.length > 0 && "hidden sm:inline")}>Rest day</span>}
         {otherDays.length > 0 && rows.length === 0 && (
           <Select
-            className="h-8 w-32 text-xs"
+            className="h-8 w-[118px] shrink-0 text-xs"
             value=""
             onChange={(e) => {
               const from = Number(e.target.value);
@@ -145,7 +148,7 @@ function DayEditor({
             <span className="w-[88px]" />
           </div>
           {rows.map((row, idx) => (
-            <div key={idx} className="grid grid-cols-[76px_76px_1fr_auto] items-center gap-2 border-b border-gray-alpha-200 pb-2 last:border-0 sm:grid-cols-[1fr_56px_56px_auto] sm:border-0 sm:pb-0">
+            <div key={idx} className="grid grid-cols-[68px_68px_1fr_auto] items-center gap-2 border-b border-gray-alpha-200 pb-2 last:border-0 sm:grid-cols-[1fr_56px_56px_auto] sm:border-0 sm:pb-0">
               <Select className="col-span-4 sm:col-span-1" value={row.exerciseId} onChange={(e) => update(idx, { exerciseId: Number(e.target.value) })}>
                 {!exercises.some((e) => e.id === row.exerciseId) && <option value={row.exerciseId}>(archived)</option>}
                 {exercises.map((e) => (
@@ -178,7 +181,7 @@ function DayEditor({
               />
                 <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-gray-700 sm:hidden">reps</span>
               </label>
-              <div className="flex w-[88px] justify-self-end">
+              <div className="flex justify-self-end">
                 <Button size="small" variant="tertiary" className="px-1.5" onClick={() => move(idx, -1)} aria-label="Move up" disabled={idx === 0}>
                   <IconChevronUp />
                 </Button>

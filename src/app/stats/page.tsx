@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { TimeBars, TimeLine, type Band } from "@/components/charts";
+import { BandLegend, TimeBars, TimeLine, type Band } from "@/components/charts";
 import { Badge, Card, EmptyState, LinkButton, PageHeader, PageSkeleton, Stat, cx } from "@/components/ui";
 import { IconChevronRight } from "@/components/icons";
 import { formatDate, startOfWeek, toTs } from "@/lib/dates";
@@ -119,13 +119,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/stats">["se
           <h2 className="text-sm font-medium">Volume per workout (kg)</h2>
           <p className="mb-2 text-xs text-gray-900">Weight × reps, summed over all sets of a session.</p>
           <TimeBars data={summaries.map((s) => ({ date: s.date, value: s.volume }))} name="Volume" unit="kg" bands={visibleBands} domain={sharedDomain} />
+          <BandLegend bands={visibleBands} />
         </Card>
       )}
 
       {(weightsInRange.length > 0 || weeklyData.length > 0) && (
         <Card className="p-4">
           <h2 className="text-sm font-medium">Body weight vs. training</h2>
-          <p className="mb-3 text-xs text-gray-900">Both charts share the same timeline; shaded areas are training blocks.</p>
+          <p className="mb-3 text-xs text-gray-900">Both charts share one timeline; shaded areas are training blocks.</p>
           {weightsInRange.length > 0 ? (
             <>
               <p className="text-xs font-medium text-gray-900">Body weight (kg)</p>
@@ -142,6 +143,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/stats">["se
               <TimeBars data={weeklyData} name="Weekly volume" unit="kg" bands={visibleBands} domain={sharedDomain} height={150} barWidth={28} />
             </>
           )}
+          <BandLegend bands={visibleBands} />
         </Card>
       )}
 
@@ -151,14 +153,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/stats">["se
         <section>
           <h2 className="mb-3 font-medium">Training blocks</h2>
           <Card className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-alpha-400 text-left text-xs text-gray-900">
                   <th className="px-4 py-2 font-medium">Plan</th>
-                  <th className="px-2 py-2 font-medium">Period</th>
+                  <th className="hidden px-2 py-2 font-medium sm:table-cell">Period</th>
                   <th className="px-2 py-2 text-right font-medium">Workouts</th>
-                  <th className="px-2 py-2 text-right font-medium">Volume</th>
-                  <th className="px-4 py-2 text-right font-medium">Body weight</th>
+                  <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Volume</th>
+                  <th className="px-4 py-2 text-right font-medium">Weight Δ</th>
                 </tr>
               </thead>
               <tbody className="tabular">
@@ -176,15 +178,18 @@ async function Content({ searchParams }: { searchParams: PageProps<"/stats">["se
                           {s.planName}
                         </Link>
                         {s.startDate <= today && s.endDate >= today && <Badge color="green" className="ml-2">Active</Badge>}
+                        <p className="text-xs text-gray-900 sm:hidden">
+                          {formatDate(s.startDate, { day: "numeric", month: "short" })} – {formatDate(s.endDate, { day: "numeric", month: "short" })} · {fmtVolume(vol)}
+                        </p>
                       </td>
-                      <td className="px-2 py-2.5 text-gray-900">
+                      <td className="hidden px-2 py-2.5 text-gray-900 sm:table-cell">
                         {formatDate(s.startDate, { day: "numeric", month: "short" })} – {formatDate(s.endDate, { day: "numeric", month: "short", year: "2-digit" })}
                       </td>
                       <td className="px-2 py-2.5 text-right">
                         {ss.length}/{planned}
                       </td>
-                      <td className="px-2 py-2.5 text-right">{fmtVolume(vol)}</td>
-                      <td className="px-4 py-2.5 text-right">
+                      <td className="hidden px-2 py-2.5 text-right sm:table-cell">{fmtVolume(vol)}</td>
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
                         {wDelta == null ? "–" : `${wDelta >= 0 ? "+" : ""}${wDelta.toFixed(1)} kg`}
                       </td>
                     </tr>
@@ -200,23 +205,41 @@ async function Content({ searchParams }: { searchParams: PageProps<"/stats">["se
         <section>
           <h2 className="mb-3 font-medium">Workout history</h2>
           <Card className="divide-y divide-gray-alpha-400">
-            {summaries.slice(0, 50).map((s) => (
-              <Link key={s.id} href={`/workout/${s.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-alpha-100">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{s.planName ?? "Freestyle workout"}</p>
-                  <p className="text-xs text-gray-900">
-                    {formatDate(s.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · {s.sets} sets · {s.reps} reps
-                  </p>
-                </div>
-                {!s.finishedAt && <Badge color="amber">Open</Badge>}
-                <span className="tabular text-sm font-medium">{fmtVolume(s.volume)}</span>
-                <IconChevronRight className="text-gray-700" />
-              </Link>
+            {summaries.slice(0, 10).map((s) => (
+              <HistoryRow key={s.id} s={s} />
             ))}
           </Card>
+          {summaries.length > 10 && (
+            <details className="group mt-3">
+              <summary className="cursor-pointer list-none py-2 text-center text-sm font-medium text-gray-900 hover:text-gray-1000 group-open:hidden">
+                Show all {summaries.length} workouts
+              </summary>
+              <Card className="divide-y divide-gray-alpha-400">
+                {summaries.slice(10).map((s) => (
+                  <HistoryRow key={s.id} s={s} />
+                ))}
+              </Card>
+            </details>
+          )}
         </section>
       )}
     </div>
+  );
+}
+
+function HistoryRow({ s }: { s: Awaited<ReturnType<typeof sessionSummaries>>[number] }) {
+  return (
+    <Link href={`/workout/${s.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-alpha-100">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{s.planName ?? "Freestyle workout"}</p>
+        <p className="text-xs text-gray-900">
+          {formatDate(s.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · {s.sets} sets · {s.reps} reps
+        </p>
+      </div>
+      {!s.finishedAt && <Badge color="amber">Open</Badge>}
+      <span className="tabular text-sm font-medium">{fmtVolume(s.volume)}</span>
+      <IconChevronRight className="text-gray-700" />
+    </Link>
   );
 }
 
