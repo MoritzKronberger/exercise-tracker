@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+/* Geist design tokens (vercel.com/geist/colors) — light */
+:root {
+  --ds-background-100: #ffffff;
+  --ds-background-200: #fafafa;
+  --ds-gray-100: #f2f2f2;
+  --ds-gray-200: #ebebeb;
+  --ds-gray-300: #e6e6e6;
+  --ds-gray-400: #eaeaea;
+  --ds-gray-500: #c9c9c9;
+  --ds-gray-600: #a8a8a8;
+  --ds-gray-700: #8f8f8f;
+  --ds-gray-800: #7d7d7d;
+  --ds-gray-900: #666666;
+  --ds-gray-1000: #171717;
+  --ds-gray-alpha-100: rgb(0 0 0 / 0.05);
+  --ds-gray-alpha-200: rgb(0 0 0 / 0.08);
+  --ds-gray-alpha-400: rgb(0 0 0 / 0.08);
+  --ds-blue-100: #f0f7ff;
+  --ds-blue-200: #e9f4ff;
+  --ds-blue-700: #006bff;
+  --ds-blue-900: #0059ec;
+  --ds-red-100: #fff0f0;
+  --ds-red-700: #fc0035;
+  --ds-red-900: #d8001b;
+  --ds-green-100: #effbef;
+  --ds-green-700: #28a948;
+  --ds-green-900: #107d32;
+  --ds-amber-100: #fff6e5;
+  --ds-amber-700: #ffb224;
+  --ds-amber-900: #aa4d00;
+  --ds-shadow-border: 0 0 0 1px var(--ds-gray-alpha-400);
+  --ds-shadow-small: 0 0 0 1px var(--ds-gray-alpha-400), 0px 2px 2px rgb(0 0 0 / 0.04);
+  --ds-shadow-menu: 0 0 0 1px var(--ds-gray-alpha-400), 0px 4px 8px -4px rgb(0 0 0 / 0.04), 0px 16px 24px -8px rgb(0 0 0 / 0.06);
+  --ds-focus-ring: 0 0 0 1px var(--ds-gray-alpha-600, #a8a8a8), 0 0 0 4px rgb(0 0 0 / 0.16);
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-band: rgb(42 120 214 / 0.08);
+  --viz-grid: #ebebeb;
+  color-scheme: light;
+}
+
+/* dark */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ds-background-100: #0a0a0a;
+    --ds-background-200: #000000;
+    --ds-gray-100: #1a1a1a;
+    --ds-gray-200: #1f1f1f;
+    --ds-gray-300: #292929;
+    --ds-gray-400: #2e2e2e;
+    --ds-gray-500: #454545;
+    --ds-gray-600: #878787;
+    --ds-gray-700: #8f8f8f;
+    --ds-gray-800: #7d7d7d;
+    --ds-gray-900: #a1a1a1;
+    --ds-gray-1000: #ededed;
+    --ds-gray-alpha-100: rgb(255 255 255 / 0.06);
+    --ds-gray-alpha-200: rgb(255 255 255 / 0.09);
+    --ds-gray-alpha-400: rgb(255 255 255 / 0.14);
+    --ds-blue-100: #0f1b2d;
+    --ds-blue-200: #0a2342;
+    --ds-blue-700: #006efe;
+    --ds-blue-900: #52a8ff;
+    --ds-red-100: #2a1314;
+    --ds-red-700: #e2162a;
+    --ds-red-900: #ff565f;
+    --ds-green-100: #0f2e18;
+    --ds-green-700: #00ac3a;
+    --ds-green-900: #62c073;
+    --ds-amber-100: #2a1a06;
+    --ds-amber-700: #ffb224;
+    --ds-amber-900: #ff9300;
+    --ds-shadow-small: 0 0 0 1px var(--ds-gray-alpha-400);
+    --ds-shadow-menu: 0 0 0 1px var(--ds-gray-alpha-400), 0px 16px 24px -8px rgb(0 0 0 / 0.5);
+    --ds-focus-ring: 0 0 0 1px #878787, 0 0 0 4px rgb(255 255 255 / 0.18);
+    --viz-1: #3987e5;
+    --viz-2: #d95926;
+    --viz-band: rgb(57 135 229 / 0.12);
+    --viz-grid: #262626;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-background-100: var(--ds-background-100);
+  --color-background-200: var(--ds-background-200);
+  --color-gray-100: var(--ds-gray-100);
+  --color-gray-200: var(--ds-gray-200);
+  --color-gray-300: var(--ds-gray-300);
+  --color-gray-400: var(--ds-gray-400);
+  --color-gray-500: var(--ds-gray-500);
+  --color-gray-600: var(--ds-gray-600);
+  --color-gray-700: var(--ds-gray-700);
+  --color-gray-800: var(--ds-gray-800);
+  --color-gray-900: var(--ds-gray-900);
+  --color-gray-1000: var(--ds-gray-1000);
+  --color-gray-alpha-100: var(--ds-gray-alpha-100);
+  --color-gray-alpha-200: var(--ds-gray-alpha-200);
+  --color-gray-alpha-400: var(--ds-gray-alpha-400);
+  --color-blue-100: var(--ds-blue-100);
+  --color-blue-200: var(--ds-blue-200);
+  --color-blue-700: var(--ds-blue-700);
+  --color-blue-900: var(--ds-blue-900);
+  --color-red-100: var(--ds-red-100);
+  --color-red-700: var(--ds-red-700);
+  --color-red-900: var(--ds-red-900);
+  --color-green-100: var(--ds-green-100);
+  --color-green-700: var(--ds-green-700);
+  --color-green-900: var(--ds-green-900);
+  --color-amber-100: var(--ds-amber-100);
+  --color-amber-700: var(--ds-amber-700);
+  --color-amber-900: var(--ds-amber-900);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --shadow-border: var(--ds-shadow-border);
+  --shadow-small: var(--ds-shadow-small);
+  --shadow-menu: var(--ds-shadow-menu);
+  --shadow-focus: var(--ds-focus-ring);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--ds-background-200);
+  color: var(--ds-gray-1000);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
