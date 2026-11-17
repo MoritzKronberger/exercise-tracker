@@ -163,8 +163,9 @@ export function ActionBar({ children, aboveNav = true }: { children: ReactNode; 
       <div className="h-10 md:hidden" />
       <div
         className={cx(
-          "fixed inset-x-0 z-30 bg-gradient-to-t from-background-200 from-60% to-transparent px-2 pt-2 pb-2 md:static md:mt-3 md:bg-none md:p-0",
-          aboveNav ? "bottom-[calc(64px+env(safe-area-inset-bottom))]" : "pb-safe bottom-0",
+          "fixed inset-x-0 z-30 bg-gradient-to-t from-background-200 from-60% to-transparent px-2 pt-2 md:static md:mt-3 md:bg-none md:p-0",
+          // Above the tab bar the tab bar already clears the home indicator; full-screen views must do it themselves.
+          aboveNav ? "bottom-[calc(64px+env(safe-area-inset-bottom))] pb-2" : "bottom-0 pb-safe-2",
         )}
       >
         <div className="mx-auto flex max-w-xl gap-1">{children}</div>

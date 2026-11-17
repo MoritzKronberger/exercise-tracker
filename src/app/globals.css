@@ -173,6 +173,11 @@ input[type="number"] {
   box-shadow: var(--ds-focus-ring);
 }
 
-.pb-safe {
+@utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 16px grid gap *plus* the home-indicator area, so bottom actions never touch the screen edge. */
+@utility pb-safe-2 {
+  padding-bottom: calc(var(--spacing) * 2 + env(safe-area-inset-bottom));
 }
