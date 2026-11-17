@@ -15,6 +15,13 @@
       "when": 1794947195523,
       "tag": "0001_progression",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794947830303,
+      "tag": "0002_accounts",
+      "breakpoints": true
     }
   ]
 }

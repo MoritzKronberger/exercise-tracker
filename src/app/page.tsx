@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ActionBar, Badge, Card, EmptyState, LinkButton, PageSkeleton, Row, cx } from "@/components/ui";
+import { IconUser } from "@/components/icons";
 import { addDays, diffDays, formatDate, isISODate, startOfWeek, WEEKDAYS_SHORT } from "@/lib/dates";
 import { computeAdherence, type DayStatus } from "@/lib/adherence";
 import { getAgenda, getPlanItems, listSchedules, sessionSummaries } from "@/lib/data";
@@ -58,6 +59,9 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
             </LinkButton>
           )}
           <DayArrows prev={addDays(date, -1)} next={addDays(date, 1)} />
+          <Link href="/account" aria-label="Account" className="grid size-6 place-items-center rounded-sm text-gray-900 active:bg-gray-alpha-200 md:hidden">
+            <IconUser size={24} />
+          </Link>
         </div>
       </div>
 

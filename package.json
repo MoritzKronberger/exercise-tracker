@@ -11,11 +11,13 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "test": "tsx --test src/lib/*.test.ts"
+    "test": "tsx --test src/lib/*.test.ts",
+    "reset-password": "tsx scripts/reset-password.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",
     "@neondatabase/serverless": "^1.2.1",
+    "better-auth": "1.7.15",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.6",
     "react": "19.3.0",

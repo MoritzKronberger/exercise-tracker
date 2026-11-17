@@ -48,8 +48,22 @@ The rules live in `src/lib/progression.ts` and are covered by `npm test`.
 1. Push this repository to GitHub and **import it in Vercel** (framework preset: Next.js, no settings to change).
 2. In the Vercel project go to **Storage → Create Database → Neon (Postgres)** and connect it to the project.
    This sets `DATABASE_URL` for all environments.
-3. Add an environment variable **`APP_PASSWORD`** (Settings → Environment Variables) — that's your login.
+3. Add two environment variables (Settings → Environment Variables):
+   - **`APP_PASSWORD`**: the invite code needed to create an account.
+   - **`BETTER_AUTH_SECRET`**: a long random value, e.g. the output of `openssl rand -base64 32`.
 4. **Redeploy.** The build runs `scripts/migrate.ts` first, which creates/updates the tables automatically.
+5. Open the app, choose **Create account**, and enter the invite code. The **first account** also takes over
+   any data that existed before accounts were added.
+
+## Accounts
+
+Email + password via [Better Auth](https://www.better-auth.com) (MIT, self-hosted): users and sessions live in
+your own database, no outside service. Every page and action only sees the signed-in user's data.
+
+- **Invite only:** creating an account needs `APP_PASSWORD`. Share it with the people you want to invite.
+- **Change password / sign out:** person icon on Today (or "Account" on desktop).
+- **Forgot password:** there's no email, so the owner resets it:
+  `DATABASE_URL=… npm run reset-password -- someone@example.com 'new-password'` (signs out their sessions).
 
 ## Install as an app
 
@@ -67,11 +81,11 @@ The app still needs a connection to open pages it hasn't loaded yet.
 
 ```bash
 npm install
-cp .env.example .env.local   # set APP_PASSWORD, leave DATABASE_URL empty
+cp .env.example .env.local   # set APP_PASSWORD, leave DATABASE_URL and BETTER_AUTH_SECRET empty
 npm run dev
 ```
 
-Without `DATABASE_URL` the app uses an embedded Postgres ([PGlite](https://pglite.dev)) stored in `./.pglite`, so no database server is needed. Without `APP_PASSWORD` the login is skipped in development (but always enforced in production).
+Without `DATABASE_URL` the app uses an embedded Postgres ([PGlite](https://pglite.dev)) stored in `./.pglite`, so no database server is needed. In development a built-in secret is used when `BETTER_AUTH_SECRET` is empty.
 
 ### Database changes
 

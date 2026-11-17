@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { AUTH_COOKIE, isValidToken } from "@/lib/auth";
+import { getSessionCookie } from "better-auth/cookies";
 
-export async function proxy(request: NextRequest) {
-  const ok = await isValidToken(request.cookies.get(AUTH_COOKIE)?.value);
-  if (ok) return NextResponse.next();
+/*
+ * Fast check for a session cookie so signed-out visitors land on /login. The session itself is
+ * validated against the database on every page and action (src/lib/server.ts → currentUser).
+ */
+export function proxy(request: NextRequest) {
+  if (getSessionCookie(request)) return NextResponse.next();
   const url = new URL("/login", request.url);
   const next = request.nextUrl.pathname + request.nextUrl.search;
   if (next !== "/") url.searchParams.set("next", next);
@@ -11,5 +14,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!login|_next/static|_next/image|favicon.ico|icon|apple-icon|manifest).*)"],
+  matcher: ["/((?!login|signup|api/auth|_next/static|_next/image|favicon.ico|icon|apple-icon|manifest).*)"],
 };

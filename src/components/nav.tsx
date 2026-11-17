@@ -18,7 +18,7 @@ const tabs = [
 ];
 
 /** Workout mode and login are full-screen: no navigation chrome. */
-const hidden = (p: string) => p.startsWith("/login") || p.startsWith("/workout");
+const hidden = (p: string) => p.startsWith("/login") || p.startsWith("/signup") || p.startsWith("/workout");
 
 export function BottomNav() {
   return <BottomNavView pathname={usePathname()} />;
@@ -79,6 +79,9 @@ export function TopNavView({ pathname }: { pathname: string }) {
             </li>
           ))}
         </ul>
+        <Link href="/account" className="ml-auto flex h-6 items-center rounded-sm px-2 text-body text-gray-900 hover:bg-gray-alpha-100">
+          Account
+        </Link>
       </div>
     </header>
   );

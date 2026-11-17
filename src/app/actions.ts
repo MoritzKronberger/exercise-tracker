@@ -1,16 +1,62 @@
 "use server";
 
-import { and, asc, desc, eq, lte, max } from "drizzle-orm";
-import { cookies } from "next/headers";
+import { and, asc, count, desc, eq, inArray, lte, max } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
-import { getDb, schema } from "@/db";
-import { AUTH_COOKIE, expectedToken } from "@/lib/auth";
+import { getDb, schema, type DB } from "@/db";
 import { isISODate, weekdayOf } from "@/lib/dates";
 import { getPlanItems, listSchedules } from "@/lib/data";
-import { requireAuth } from "@/lib/server";
+import { userId } from "@/lib/server";
 
 const { exercises, plans, planItems, schedules, sessions, sessionExercises, setLogs, bodyWeights } = schema;
+
+/*
+ * Ownership: every action resolves the signed-in user and only touches that user's rows. Rows
+ * without an owner column (plan items, workout exercises, sets) are reached through an owned parent,
+ * and every referenced id (exercise, plan, schedule) is checked before it is used.
+ */
+
+async function context() {
+  const [db, uid] = await Promise.all([getDb(), userId()]);
+  return { db, uid };
+}
+
+class NotFound extends Error {
+  constructor() {
+    super("Not found");
+  }
+}
+
+async function ownPlan(db: DB, uid: string, id: number) {
+  const [row] = await db.select({ id: plans.id }).from(plans).where(and(eq(plans.id, id), eq(plans.userId, uid)));
+  if (!row) throw new NotFound();
+}
+
+async function ownSession(db: DB, uid: string, id: number) {
+  const [row] = await db.select({ id: sessions.id }).from(sessions).where(and(eq(sessions.id, id), eq(sessions.userId, uid)));
+  if (!row) throw new NotFound();
+}
+
+async function ownExercises(db: DB, uid: string, ids: number[]) {
+  const unique = [...new Set(ids)];
+  if (!unique.length) return;
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(exercises)
+    .where(and(inArray(exercises.id, unique), eq(exercises.userId, uid)));
+  if (n !== unique.length) throw new NotFound();
+}
+
+/** A logged set, only if it belongs to one of the user's workouts. */
+async function ownSet(db: DB, uid: string, id: number) {
+  const [row] = await db
+    .select({ id: setLogs.id, sessionId: setLogs.sessionId, exerciseId: setLogs.exerciseId })
+    .from(setLogs)
+    .innerJoin(sessions, eq(sessions.id, setLogs.sessionId))
+    .where(and(eq(setLogs.id, id), eq(sessions.userId, uid)));
+  if (!row) throw new NotFound();
+  return row;
+}
 
 function int(v: unknown, min: number, max: number, fallback?: number) {
   const n = Math.round(Number(v));
@@ -33,48 +79,18 @@ function str(v: unknown, maxLen = 120) {
   return s;
 }
 
-// ---------------------------------------------------------------- auth
-
-export async function login(_: unknown, formData: FormData) {
-  const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/");
-  if (!process.env.APP_PASSWORD) {
-    return { error: "APP_PASSWORD is not configured on the server." };
-  }
-  if (password !== process.env.APP_PASSWORD) {
-    await new Promise((r) => setTimeout(r, 600));
-    return { error: "Wrong password." };
-  }
-  const jar = await cookies();
-  jar.set(AUTH_COOKIE, await expectedToken(), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-  });
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
-}
-
-export async function logout() {
-  (await cookies()).delete(AUTH_COOKIE);
-  redirect("/login");
-}
-
 // ---------------------------------------------------------------- exercises
 
 export async function createExercise(formData: FormData) {
-  await requireAuth();
-  const db = await getDb();
-  await db.insert(exercises).values({ name: str(formData.get("name")) });
+  const { db, uid } = await context();
+  await db.insert(exercises).values({ userId: uid, name: str(formData.get("name")) });
   refresh();
 }
 
 export type ExerciseSettings = { name: string; restSeconds: number | null; minReps: number; maxReps: number; weightStep: number };
 
 export async function updateExercise(id: number, data: ExerciseSettings) {
-  await requireAuth();
-  const db = await getDb();
+  const { db, uid } = await context();
   const minReps = int(data.minReps, 1, 100);
   const maxReps = int(data.maxReps, minReps + 1, 101);
   await db
@@ -86,47 +102,42 @@ export async function updateExercise(id: number, data: ExerciseSettings) {
       maxReps,
       weightStep: num(data.weightStep, 0.05, 50),
     })
-    .where(eq(exercises.id, id));
+    .where(and(eq(exercises.id, id), eq(exercises.userId, uid)));
   refresh();
 }
 
 export async function setExerciseArchived(id: number, archived: boolean) {
-  await requireAuth();
-  const db = await getDb();
-  await db.update(exercises).set({ archived }).where(eq(exercises.id, id));
+  const { db, uid } = await context();
+  await db.update(exercises).set({ archived }).where(and(eq(exercises.id, id), eq(exercises.userId, uid)));
   refresh();
 }
 
 export async function deleteExercise(id: number) {
-  await requireAuth();
-  const db = await getDb();
-  await db.delete(exercises).where(eq(exercises.id, id));
+  const { db, uid } = await context();
+  await db.delete(exercises).where(and(eq(exercises.id, id), eq(exercises.userId, uid)));
   refresh();
 }
 
 // ---------------------------------------------------------------- plans
 
 export async function createPlan(formData: FormData) {
-  await requireAuth();
-  const db = await getDb();
-  const [plan] = await db.insert(plans).values({ name: str(formData.get("name")) }).returning();
+  const { db, uid } = await context();
+  const [plan] = await db.insert(plans).values({ userId: uid, name: str(formData.get("name")) }).returning();
   redirect(`/plans/${plan.id}`);
 }
 
 export async function renamePlan(id: number, name: string) {
-  await requireAuth();
-  const db = await getDb();
-  await db.update(plans).set({ name: str(name) }).where(eq(plans.id, id));
+  const { db, uid } = await context();
+  await db.update(plans).set({ name: str(name) }).where(and(eq(plans.id, id), eq(plans.userId, uid)));
   refresh();
 }
 
 export async function duplicatePlan(id: number) {
-  await requireAuth();
-  const db = await getDb();
-  const [orig] = await db.select().from(plans).where(eq(plans.id, id));
+  const { db, uid } = await context();
+  const [orig] = await db.select().from(plans).where(and(eq(plans.id, id), eq(plans.userId, uid)));
   if (!orig) return;
   const items = await getPlanItems([id]);
-  const [copy] = await db.insert(plans).values({ name: `${orig.name} (copy)` }).returning();
+  const [copy] = await db.insert(plans).values({ userId: uid, name: `${orig.name} (copy)` }).returning();
   if (items.length) {
     await db.insert(planItems).values(
       items.map((i) => ({ planId: copy.id, weekday: i.weekday, exerciseId: i.exerciseId, sets: i.sets, position: i.position })),
@@ -136,9 +147,8 @@ export async function duplicatePlan(id: number) {
 }
 
 export async function deletePlan(id: number) {
-  await requireAuth();
-  const db = await getDb();
-  await db.delete(plans).where(eq(plans.id, id));
+  const { db, uid } = await context();
+  await db.delete(plans).where(and(eq(plans.id, id), eq(plans.userId, uid)));
   redirect("/plans");
 }
 
@@ -146,22 +156,23 @@ export type DayItemInput = { exerciseId: number; sets: number };
 
 /** Replaces all exercises of one weekday of a plan. */
 export async function savePlanDay(planId: number, weekday: number, items: DayItemInput[]) {
-  await requireAuth();
-  const db = await getDb();
-  const wd = int(weekday, 0, 6);
+  const { db, uid } = await context();
+  await ownPlan(db, uid, planId);
+  const rows = items.map((i, idx) => ({
+    planId,
+    weekday: int(weekday, 0, 6),
+    exerciseId: int(i.exerciseId, 1, Number.MAX_SAFE_INTEGER),
+    sets: int(i.sets, 1, 50),
+    position: idx,
+  }));
+  await ownExercises(
+    db,
+    uid,
+    rows.map((r) => r.exerciseId),
+  );
   await db.transaction(async (tx) => {
-    await tx.delete(planItems).where(and(eq(planItems.planId, planId), eq(planItems.weekday, wd)));
-    if (items.length) {
-      await tx.insert(planItems).values(
-        items.map((i, idx) => ({
-          planId,
-          weekday: wd,
-          exerciseId: int(i.exerciseId, 1, Number.MAX_SAFE_INTEGER),
-          sets: int(i.sets, 1, 50),
-          position: idx,
-        })),
-      );
-    }
+    await tx.delete(planItems).where(and(eq(planItems.planId, planId), eq(planItems.weekday, int(weekday, 0, 6))));
+    if (rows.length) await tx.insert(planItems).values(rows);
   });
   refresh();
 }
@@ -169,36 +180,31 @@ export async function savePlanDay(planId: number, weekday: number, items: DayIte
 // ---------------------------------------------------------------- schedules
 
 export async function createSchedule(formData: FormData) {
-  await requireAuth();
-  const db = await getDb();
+  const { db, uid } = await context();
   const startDate = String(formData.get("startDate"));
   if (!isISODate(startDate)) throw new Error("Invalid start date");
-  await db.insert(schedules).values({
-    planId: int(formData.get("planId"), 1, Number.MAX_SAFE_INTEGER),
-    startDate,
-    weeks: int(formData.get("weeks"), 1, 104),
-  });
+  const planId = int(formData.get("planId"), 1, Number.MAX_SAFE_INTEGER);
+  await ownPlan(db, uid, planId);
+  await db.insert(schedules).values({ userId: uid, planId, startDate, weeks: int(formData.get("weeks"), 1, 104) });
   refresh();
 }
 
 export async function deleteSchedule(id: number) {
-  await requireAuth();
-  const db = await getDb();
-  await db.delete(schedules).where(eq(schedules.id, id));
+  const { db, uid } = await context();
+  await db.delete(schedules).where(and(eq(schedules.id, id), eq(schedules.userId, uid)));
   refresh();
 }
 
 // ---------------------------------------------------------------- workouts
 
 export async function startSession(date: string, scheduleId: number | null) {
-  await requireAuth();
+  const { db, uid } = await context();
   if (!isISODate(date)) throw new Error("Invalid date");
-  const db = await getDb();
   let planId: number | null = null;
   let items: { exerciseId: number; sets: number }[] = [];
   if (scheduleId) {
-    const sched = (await listSchedules()).find((s) => s.id === scheduleId);
-    if (!sched) throw new Error("Schedule not found");
+    const sched = (await listSchedules()).find((s) => s.id === scheduleId); // only the user's schedules
+    if (!sched) throw new NotFound();
     planId = sched.planId;
     const wd = weekdayOf(date);
     items = (await getPlanItems([sched.planId])).filter((i) => i.weekday === wd);
@@ -207,11 +213,11 @@ export async function startSession(date: string, scheduleId: number | null) {
     const [existing] = await db
       .select({ id: sessions.id })
       .from(sessions)
-      .where(and(eq(sessions.date, date), eq(sessions.scheduleId, scheduleId)))
+      .where(and(eq(sessions.userId, uid), eq(sessions.date, date), eq(sessions.scheduleId, scheduleId)))
       .limit(1);
     if (existing) redirect(`/workout/${existing.id}`);
   }
-  const [session] = await db.insert(sessions).values({ date, scheduleId, planId }).returning();
+  const [session] = await db.insert(sessions).values({ userId: uid, date, scheduleId, planId }).returning();
   if (items.length) {
     await db.insert(sessionExercises).values(
       items.map((i, idx) => ({ sessionId: session.id, exerciseId: i.exerciseId, targetSets: i.sets, position: idx })),
@@ -221,8 +227,9 @@ export async function startSession(date: string, scheduleId: number | null) {
 }
 
 export async function addSessionExercise(sessionId: number, exerciseId: number, targetSets: number) {
-  await requireAuth();
-  const db = await getDb();
+  const { db, uid } = await context();
+  await ownSession(db, uid, sessionId);
+  await ownExercises(db, uid, [exerciseId]);
   const [{ pos }] = await db
     .select({ pos: max(sessionExercises.position) })
     .from(sessionExercises)
@@ -237,12 +244,15 @@ export async function addSessionExercise(sessionId: number, exerciseId: number, 
 }
 
 export async function removeSessionExercise(sessionExerciseId: number) {
-  await requireAuth();
-  const db = await getDb();
-  const [se] = await db.select().from(sessionExercises).where(eq(sessionExercises.id, sessionExerciseId));
+  const { db, uid } = await context();
+  const [se] = await db
+    .select({ id: sessionExercises.id, sessionId: sessionExercises.sessionId, exerciseId: sessionExercises.exerciseId })
+    .from(sessionExercises)
+    .innerJoin(sessions, eq(sessions.id, sessionExercises.sessionId))
+    .where(and(eq(sessionExercises.id, sessionExerciseId), eq(sessions.userId, uid)));
   if (!se) return;
   await db.delete(setLogs).where(and(eq(setLogs.sessionId, se.sessionId), eq(setLogs.exerciseId, se.exerciseId)));
-  await db.delete(sessionExercises).where(eq(sessionExercises.id, sessionExerciseId));
+  await db.delete(sessionExercises).where(eq(sessionExercises.id, se.id));
   refresh();
 }
 
@@ -251,8 +261,9 @@ export async function removeSessionExercise(sessionExerciseId: number) {
  * retried later, so the client timestamp keeps rest times accurate.
  */
 export async function logSet(sessionId: number, exerciseId: number, weight: number, reps: number, completedAtIso?: string) {
-  await requireAuth();
-  const db = await getDb();
+  const { db, uid } = await context();
+  await ownSession(db, uid, sessionId);
+  await ownExercises(db, uid, [exerciseId]);
   const serverNow = Date.now();
   const clientTs = completedAtIso ? Date.parse(completedAtIso) : NaN;
   // Accept the device time if it is plausible (not in the future, at most 12h old).
@@ -280,17 +291,15 @@ export async function logSet(sessionId: number, exerciseId: number, weight: numb
 }
 
 export async function updateSet(id: number, weight: number, reps: number) {
-  await requireAuth();
-  const db = await getDb();
+  const { db, uid } = await context();
+  await ownSet(db, uid, id);
   await db.update(setLogs).set({ weight: num(weight, 0, 2000), reps: int(reps, 0, 1000) }).where(eq(setLogs.id, id));
   refresh();
 }
 
 export async function deleteSet(id: number) {
-  await requireAuth();
-  const db = await getDb();
-  const [row] = await db.select().from(setLogs).where(eq(setLogs.id, id));
-  if (!row) return;
+  const { db, uid } = await context();
+  const row = await ownSet(db, uid, id);
   await db.delete(setLogs).where(eq(setLogs.id, id));
   // Renumber remaining sets of that exercise.
   const rest = await db
@@ -305,37 +314,33 @@ export async function deleteSet(id: number) {
 }
 
 export async function finishSession(sessionId: number) {
-  await requireAuth();
-  const db = await getDb();
-  await db.update(sessions).set({ finishedAt: new Date() }).where(eq(sessions.id, sessionId));
+  const { db, uid } = await context();
+  await db.update(sessions).set({ finishedAt: new Date() }).where(and(eq(sessions.id, sessionId), eq(sessions.userId, uid)));
   refresh();
 }
 
 export async function deleteSession(sessionId: number) {
-  await requireAuth();
-  const db = await getDb();
-  await db.delete(sessions).where(eq(sessions.id, sessionId));
+  const { db, uid } = await context();
+  await db.delete(sessions).where(and(eq(sessions.id, sessionId), eq(sessions.userId, uid)));
   redirect("/");
 }
 
 // ---------------------------------------------------------------- body weight
 
 export async function saveBodyWeight(formData: FormData) {
-  await requireAuth();
-  const db = await getDb();
+  const { db, uid } = await context();
   const date = String(formData.get("date"));
   if (!isISODate(date)) throw new Error("Invalid date");
   const weight = num(formData.get("weight"), 20, 400);
   await db
     .insert(bodyWeights)
-    .values({ date, weight })
-    .onConflictDoUpdate({ target: bodyWeights.date, set: { weight } });
+    .values({ userId: uid, date, weight })
+    .onConflictDoUpdate({ target: [bodyWeights.userId, bodyWeights.date], set: { weight } });
   refresh();
 }
 
 export async function deleteBodyWeight(id: number) {
-  await requireAuth();
-  const db = await getDb();
-  await db.delete(bodyWeights).where(eq(bodyWeights.id, id));
+  const { db, uid } = await context();
+  await db.delete(bodyWeights).where(and(eq(bodyWeights.id, id), eq(bodyWeights.userId, uid)));
   refresh();
 }

@@ -58,3 +58,6 @@ export const IconDumbbell = (p: P) => (
 export const IconLogout = (p: P) => (
   <Icon {...p}><path d="M6 14H3.5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1H6M10.5 11.5 14 8l-3.5-3.5M14 8H6" /></Icon>
 );
+export const IconUser = (p: P) => (
+  <Icon {...p}><circle cx="8" cy="5.5" r="2.75" /><path d="M2.75 14c.6-2.6 2.7-4.25 5.25-4.25S12.65 11.4 13.25 14" /></Icon>
+);

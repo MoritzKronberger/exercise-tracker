@@ -1,8 +1,15 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, ne, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { scheduleEnd, scheduleWeek, weekdayOf } from "./dates";
 import { e1rm } from "./format";
+import { userId } from "./server";
+
+/*
+ * Every read is scoped to the signed-in user. Each function resolves the user itself (cached per
+ * request), so a page can't forget to. Child rows (plan items, workout exercises, sets) are reached
+ * only through a parent that is filtered by owner.
+ */
 
 const { exercises, plans, planItems, schedules, sessions, sessionExercises, setLogs, bodyWeights } = schema;
 
@@ -10,20 +17,22 @@ export type Exercise = typeof exercises.$inferSelect;
 export type SetLog = typeof setLogs.$inferSelect;
 
 export async function listExercises(includeArchived = false) {
-  const db = await getDb();
+  const [db, uid] = await Promise.all([getDb(), userId()]);
   const rows = await db
     .select()
     .from(exercises)
-    .where(includeArchived ? undefined : eq(exercises.archived, false))
+    .where(and(eq(exercises.userId, uid), includeArchived ? undefined : eq(exercises.archived, false)))
     .orderBy(asc(sql`lower(${exercises.name})`));
   return rows;
 }
 
 export async function exerciseUsage() {
-  const db = await getDb();
+  const [db, uid] = await Promise.all([getDb(), userId()]);
   const rows = await db
     .select({ exerciseId: setLogs.exerciseId, sets: sql<number>`count(*)::int`, last: sql<string>`max(${setLogs.completedAt})` })
     .from(setLogs)
+    .innerJoin(sessions, eq(sessions.id, setLogs.sessionId))
+    .where(eq(sessions.userId, uid))
     .groupBy(setLogs.exerciseId);
   return new Map(rows.map((r) => [r.exerciseId, r]));
 }
@@ -42,7 +51,7 @@ export type PlanItem = {
 
 export async function getPlanItems(planIds: number[]): Promise<PlanItem[]> {
   if (!planIds.length) return [];
-  const db = await getDb();
+  const [db, uid] = await Promise.all([getDb(), userId()]);
   return db
     .select({
       id: planItems.id,
@@ -56,14 +65,15 @@ export async function getPlanItems(planIds: number[]): Promise<PlanItem[]> {
       maxReps: exercises.maxReps,
     })
     .from(planItems)
+    .innerJoin(plans, eq(plans.id, planItems.planId))
     .innerJoin(exercises, eq(exercises.id, planItems.exerciseId))
-    .where(inArray(planItems.planId, planIds))
+    .where(and(inArray(planItems.planId, planIds), eq(plans.userId, uid)))
     .orderBy(asc(planItems.weekday), asc(planItems.position), asc(planItems.id));
 }
 
 export async function listPlans() {
-  const db = await getDb();
-  const rows = await db.select().from(plans).orderBy(desc(plans.createdAt));
+  const [db, uid] = await Promise.all([getDb(), userId()]);
+  const rows = await db.select().from(plans).where(eq(plans.userId, uid)).orderBy(desc(plans.createdAt));
   const items = await getPlanItems(rows.map((r) => r.id));
   return rows.map((p) => ({
     ...p,
@@ -72,14 +82,14 @@ export async function listPlans() {
 }
 
 export async function getPlan(id: number) {
-  const db = await getDb();
-  const [plan] = await db.select().from(plans).where(eq(plans.id, id));
+  const [db, uid] = await Promise.all([getDb(), userId()]);
+  const [plan] = await db.select().from(plans).where(and(eq(plans.id, id), eq(plans.userId, uid)));
   if (!plan) return null;
   return { ...plan, items: await getPlanItems([id]) };
 }
 
 export async function listSchedules() {
-  const db = await getDb();
+  const [db, uid] = await Promise.all([getDb(), userId()]);
   const rows = await db
     .select({
       id: schedules.id,
@@ -90,6 +100,7 @@ export async function listSchedules() {
     })
     .from(schedules)
     .innerJoin(plans, eq(plans.id, schedules.planId))
+    .where(eq(schedules.userId, uid))
     .orderBy(desc(schedules.startDate));
   return rows.map((r) => ({ ...r, endDate: scheduleEnd(r.startDate, r.weeks) }));
 }
@@ -98,7 +109,7 @@ export type Schedule = Awaited<ReturnType<typeof listSchedules>>[number];
 
 /** Everything planned for a range of dates, with sessions already logged on those dates. */
 export async function getAgenda(dates: string[]) {
-  const db = await getDb();
+  const [db, uid] = await Promise.all([getDb(), userId()]);
   const allSchedules = await listSchedules();
   const active = allSchedules.filter((s) => dates.some((d) => scheduleWeek(s.startDate, s.weeks, d) !== null));
   const items = await getPlanItems([...new Set(active.map((s) => s.planId))]);
@@ -106,7 +117,7 @@ export async function getAgenda(dates: string[]) {
     ? await db
         .select()
         .from(sessions)
-        .where(inArray(sessions.date, dates))
+        .where(and(eq(sessions.userId, uid), inArray(sessions.date, dates)))
         .orderBy(asc(sessions.startedAt))
     : [];
 
@@ -125,7 +136,7 @@ export async function getAgenda(dates: string[]) {
 }
 
 export async function getSessionDetail(id: number) {
-  const db = await getDb();
+  const [db, uid] = await Promise.all([getDb(), userId()]);
   const [session] = await db
     .select({
       id: sessions.id,
@@ -138,7 +149,7 @@ export async function getSessionDetail(id: number) {
     })
     .from(sessions)
     .leftJoin(plans, eq(plans.id, sessions.planId))
-    .where(eq(sessions.id, id));
+    .where(and(eq(sessions.id, id), eq(sessions.userId, uid)));
   if (!session) return null;
 
   const exs = await db
@@ -182,6 +193,7 @@ export async function getSessionDetail(id: number) {
       .innerJoin(sessions, eq(sessions.id, setLogs.sessionId))
       .where(
         and(
+          eq(sessions.userId, uid),
           inArray(setLogs.exerciseId, exerciseIds),
           ne(setLogs.sessionId, id),
           lt(sessions.startedAt, session.startedAt),
@@ -213,7 +225,7 @@ export type SessionDetail = NonNullable<Awaited<ReturnType<typeof getSessionDeta
 // ---------------------------------------------------------------- statistics
 
 export async function sessionSummaries() {
-  const db = await getDb();
+  const [db, uid] = await Promise.all([getDb(), userId()]);
   const rows = await db
     .select({
       id: sessions.id,
@@ -231,6 +243,7 @@ export async function sessionSummaries() {
     .from(sessions)
     .leftJoin(plans, eq(plans.id, sessions.planId))
     .leftJoin(setLogs, eq(setLogs.sessionId, sessions.id))
+    .where(eq(sessions.userId, uid))
     .groupBy(sessions.id, plans.name)
     .orderBy(desc(sessions.date), desc(sessions.startedAt));
   return rows;
@@ -248,7 +261,7 @@ export type ExerciseProgressPoint = {
 };
 
 export async function exerciseProgress(): Promise<Map<number, ExerciseProgressPoint[]>> {
-  const db = await getDb();
+  const [db, uid] = await Promise.all([getDb(), userId()]);
   const rows = await db
     .select({
       exerciseId: setLogs.exerciseId,
@@ -260,6 +273,7 @@ export async function exerciseProgress(): Promise<Map<number, ExerciseProgressPo
     })
     .from(setLogs)
     .innerJoin(sessions, eq(sessions.id, setLogs.sessionId))
+    .where(eq(sessions.userId, uid))
     .orderBy(asc(sessions.startedAt), asc(setLogs.setNumber));
 
   const out = new Map<number, ExerciseProgressPoint[]>();
@@ -284,12 +298,6 @@ export async function exerciseProgress(): Promise<Map<number, ExerciseProgressPo
 }
 
 export async function listBodyWeights() {
-  const db = await getDb();
-  return db.select().from(bodyWeights).orderBy(asc(bodyWeights.date));
-}
-
-export async function hasAnyFinishedSession() {
-  const db = await getDb();
-  const [r] = await db.select({ id: sessions.id }).from(sessions).where(isNotNull(sessions.finishedAt)).limit(1);
-  return Boolean(r);
+  const [db, uid] = await Promise.all([getDb(), userId()]);
+  return db.select().from(bodyWeights).where(eq(bodyWeights.userId, uid)).orderBy(asc(bodyWeights.date));
 }
