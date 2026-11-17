@@ -23,7 +23,7 @@ Built for use mid-workout with tired hands, on a coarse grid:
 ## Progression
 
 Every set is assumed to be taken to failure. Each exercise has a rep range (default 6–12) and a weight step
-(the smallest change actually possible, default 0.5 kg), set on the Exercises screen. Plans only define the
+(the smallest change actually possible, default 2.5 kg), set on the Exercises screen. Plans only define the
 number of sets (default 2).
 
 Each set number progresses on its own track — set 2 is only compared with set 2 of the last session, because a

@@ -20,7 +20,7 @@ export const exercises = pgTable("exercises", {
   minReps: integer("min_reps").notNull().default(6),
   maxReps: integer("max_reps").notNull().default(12),
   /** Smallest weight change actually possible on this exercise (plates, dumbbell steps, machine pins). */
-  weightStep: real("weight_step").notNull().default(0.5),
+  weightStep: real("weight_step").notNull().default(2.5),
   archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

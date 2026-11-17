@@ -118,7 +118,7 @@ function parseWeight(v: string) {
   return Number(v.replace(",", "."));
 }
 
-function EditSetSheet({ log, step = 0.5, onClose }: { log: Log | null; step?: number; onClose: () => void }) {
+function EditSetSheet({ log, step = 2.5, onClose }: { log: Log | null; step?: number; onClose: () => void }) {
   return (
     <Sheet open={!!log} onClose={onClose} title={log ? `Set ${log.setNumber}` : ""}>
       {log && <EditSetForm key={log.id} log={log} step={step} onClose={onClose} />}

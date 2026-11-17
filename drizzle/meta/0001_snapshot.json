@@ -1,5 +1,5 @@
 {
-  "id": "1cdc40b7-e2a3-4e07-b92e-cc30fca91a97",
+  "id": "753ce4f5-a8e4-4c88-bfd4-42d2e5747884",
   "prevId": "4c726ddd-ae42-4090-b146-14487a3ed376",
   "version": "7",
   "dialect": "postgresql",
@@ -92,7 +92,7 @@
           "type": "real",
           "primaryKey": false,
           "notNull": true,
-          "default": 0.5
+          "default": 2.5
         },
         "archived": {
           "name": "archived",
