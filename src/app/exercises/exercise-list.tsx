@@ -4,9 +4,9 @@ import { useRef, useState, useTransition } from "react";
 import { createExercise, deleteExercise, setExerciseArchived, updateExercise } from "@/app/actions";
 import { Button, Card, EmptyState, Field, Input, More, cx } from "@/components/ui";
 import { IconChevronDown } from "@/components/icons";
-import { fmtDuration } from "@/lib/format";
+import { fmtWeight } from "@/lib/format";
 
-type Row = { id: number; name: string; restSeconds: number | null; archived: boolean; loggedSets: number };
+type Row = { id: number; name: string; restSeconds: number | null; minReps: number; maxReps: number; weightStep: number; archived: boolean; loggedSets: number };
 
 export function ExerciseList({ exercises }: { exercises: Row[] }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -51,13 +51,19 @@ export function ExerciseList({ exercises }: { exercises: Row[] }) {
 function ExerciseRow({ row, open, onToggle }: { row: Row; open: boolean; onToggle: () => void }) {
   const [name, setName] = useState(row.name);
   const [rest, setRest] = useState(row.restSeconds?.toString() ?? "");
+  const [minReps, setMinReps] = useState(String(row.minReps));
+  const [maxReps, setMaxReps] = useState(String(row.maxReps));
+  const [step, setStep] = useState(String(row.weightStep));
+  const valid = Number(minReps) >= 1 && Number(maxReps) > Number(minReps) && Number(step.replace(",", ".")) > 0;
   const [pending, start] = useTransition();
 
   return (
     <div className="[&:not(:first-child)]:border-t [&:not(:first-child)]:border-gray-alpha-400">
       <button type="button" onClick={onToggle} className="flex min-h-7 w-full items-center gap-2 px-2 text-left active:bg-gray-alpha-100" aria-expanded={open}>
         <span className={cx("min-w-0 flex-1 text-body break-words", row.archived && "text-gray-900")}>{row.name}</span>
-        {row.restSeconds ? <span className="tabular text-meta text-gray-900">{fmtDuration(row.restSeconds)}</span> : null}
+        <span className="tabular text-meta text-gray-900">
+          {row.minReps}–{row.maxReps} · {fmtWeight(row.weightStep)} kg
+        </span>
         <IconChevronDown size={24} className={cx("shrink-0 text-gray-700 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
@@ -66,7 +72,13 @@ function ExerciseRow({ row, open, onToggle }: { row: Row; open: boolean; onToggl
           onSubmit={(ev) => {
             ev.preventDefault();
             start(async () => {
-              await updateExercise(row.id, { name, restSeconds: rest.trim() ? Number(rest) : null });
+              await updateExercise(row.id, {
+                name,
+                restSeconds: rest.trim() ? Number(rest) : null,
+                minReps: Number(minReps),
+                maxReps: Number(maxReps),
+                weightStep: Number(step.replace(",", ".")),
+              });
               onToggle();
             });
           }}
@@ -74,9 +86,20 @@ function ExerciseRow({ row, open, onToggle }: { row: Row; open: boolean; onToggl
           <Field label="Name">
             <Input value={name} onChange={(e) => setName(e.target.value)} required />
           </Field>
-          <Field label="Rest between sets (seconds)">
-            <Input type="number" inputMode="numeric" placeholder="none" value={rest} onChange={(e) => setRest(e.target.value)} />
-          </Field>
+          <div className="grid grid-cols-2 gap-1">
+            <Field label="Min reps">
+              <Input type="number" inputMode="numeric" value={minReps} onChange={(e) => setMinReps(e.target.value)} />
+            </Field>
+            <Field label="Max reps">
+              <Input type="number" inputMode="numeric" value={maxReps} onChange={(e) => setMaxReps(e.target.value)} />
+            </Field>
+            <Field label="Weight step (kg)">
+              <Input inputMode="decimal" value={step} onChange={(e) => setStep(e.target.value)} />
+            </Field>
+            <Field label="Rest (seconds)">
+              <Input type="number" inputMode="numeric" placeholder="none" value={rest} onChange={(e) => setRest(e.target.value)} />
+            </Field>
+          </div>
           <div className="grid grid-cols-2 gap-1">
             <Button
               variant="danger"
@@ -90,7 +113,7 @@ function ExerciseRow({ row, open, onToggle }: { row: Row; open: boolean; onToggl
             >
               {row.archived ? "Restore" : row.loggedSets > 0 ? "Archive" : "Delete"}
             </Button>
-            <Button type="submit" variant="primary" disabled={pending}>
+            <Button type="submit" variant="primary" disabled={pending || !valid}>
               Save
             </Button>
           </div>

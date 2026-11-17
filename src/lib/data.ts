@@ -35,8 +35,9 @@ export type PlanItem = {
   exerciseId: number;
   exerciseName: string;
   sets: number;
-  reps: number;
   position: number;
+  minReps: number;
+  maxReps: number;
 };
 
 export async function getPlanItems(planIds: number[]): Promise<PlanItem[]> {
@@ -50,8 +51,9 @@ export async function getPlanItems(planIds: number[]): Promise<PlanItem[]> {
       exerciseId: planItems.exerciseId,
       exerciseName: exercises.name,
       sets: planItems.sets,
-      reps: planItems.reps,
       position: planItems.position,
+      minReps: exercises.minReps,
+      maxReps: exercises.maxReps,
     })
     .from(planItems)
     .innerJoin(exercises, eq(exercises.id, planItems.exerciseId))
@@ -145,8 +147,10 @@ export async function getSessionDetail(id: number) {
       exerciseId: sessionExercises.exerciseId,
       name: exercises.name,
       restSeconds: exercises.restSeconds,
+      minReps: exercises.minReps,
+      maxReps: exercises.maxReps,
+      weightStep: exercises.weightStep,
       targetSets: sessionExercises.targetSets,
-      targetReps: sessionExercises.targetReps,
       position: sessionExercises.position,
     })
     .from(sessionExercises)

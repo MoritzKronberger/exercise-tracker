@@ -24,6 +24,9 @@ async function Content() {
         id: e.id,
         name: e.name,
         restSeconds: e.restSeconds,
+        minReps: e.minReps,
+        maxReps: e.maxReps,
+        weightStep: e.weightStep,
         archived: e.archived,
         loggedSets: usage.get(e.id)?.sets ?? 0,
       }))}

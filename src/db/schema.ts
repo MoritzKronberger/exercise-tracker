@@ -16,6 +16,11 @@ export const exercises = pgTable("exercises", {
   name: text("name").notNull(),
   /** Optional target rest between sets in seconds; the timer vibrates once reached. */
   restSeconds: integer("rest_seconds"),
+  /** Rep range used for progression (double progression: add reps, then weight). */
+  minReps: integer("min_reps").notNull().default(6),
+  maxReps: integer("max_reps").notNull().default(12),
+  /** Smallest weight change actually possible on this exercise (plates, dumbbell steps, machine pins). */
+  weightStep: real("weight_step").notNull().default(0.5),
   archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -39,7 +44,6 @@ export const planItems = pgTable(
       .notNull()
       .references(() => exercises.id, { onDelete: "cascade" }),
     sets: integer("sets").notNull(),
-    reps: integer("reps").notNull(),
     position: integer("position").notNull().default(0),
   },
   (t) => [index("plan_items_plan_idx").on(t.planId, t.weekday)],
@@ -80,7 +84,6 @@ export const sessionExercises = pgTable(
       .notNull()
       .references(() => exercises.id, { onDelete: "cascade" }),
     targetSets: integer("target_sets").notNull(),
-    targetReps: integer("target_reps").notNull(),
     position: integer("position").notNull().default(0),
   },
   (t) => [index("session_exercises_session_idx").on(t.sessionId)],

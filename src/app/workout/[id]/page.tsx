@@ -37,7 +37,9 @@ async function Content({ params }: { params: PageProps<"/workout/[id]">["params"
       name: e.name,
       restSeconds: e.restSeconds,
       targetSets: e.targetSets,
-      targetReps: e.targetReps,
+      minReps: e.minReps,
+      maxReps: e.maxReps,
+      weightStep: e.weightStep,
       previous: e.previous,
       logs: e.logs.map((l) => ({
         id: l.id,

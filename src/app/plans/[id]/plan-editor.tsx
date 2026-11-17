@@ -88,7 +88,7 @@ function DayEditor({
   all: Item[];
   exercises: Ex[];
 }) {
-  const serialized = JSON.stringify(initial.map(({ exerciseId, sets, reps }) => ({ exerciseId, sets, reps })));
+  const serialized = JSON.stringify(initial.map(({ exerciseId, sets }) => ({ exerciseId, sets })));
   const [rows, setRows] = useState<DayItemInput[]>(() => JSON.parse(serialized));
   const [synced, setSynced] = useState(serialized);
   if (synced !== serialized) {
@@ -124,8 +124,6 @@ function DayEditor({
               </Select>
               <div className="flex items-center gap-1">
                 <NumberField value={row.sets} onChange={(n) => update(idx, { sets: n })} suffix="sets" />
-                <span className="text-body text-gray-900">×</span>
-                <NumberField value={row.reps} onChange={(n) => update(idx, { reps: n })} suffix="reps" />
                 <Button variant="ghost" className="ml-auto px-0" onClick={() => setRows((r) => r.filter((_, i) => i !== idx))} aria-label="Remove">
                   <IconTrash size={24} />
                 </Button>
@@ -139,7 +137,7 @@ function DayEditor({
               aria-label="Copy from another day"
               onChange={(e) => {
                 const from = Number(e.target.value);
-                setRows(all.filter((i) => i.weekday === from).map(({ exerciseId, sets, reps }) => ({ exerciseId, sets, reps })));
+                setRows(all.filter((i) => i.weekday === from).map(({ exerciseId, sets }) => ({ exerciseId, sets })));
               }}
             >
               <option value="" disabled>
@@ -160,7 +158,7 @@ function DayEditor({
               const used = new Set(rows.map((r) => r.exerciseId));
               const next = exercises.find((e) => !used.has(e.id)) ?? exercises[0];
               const last = rows[rows.length - 1];
-              setRows((r) => [...r, { exerciseId: next.id, sets: last?.sets ?? 3, reps: last?.reps ?? 10 }]);
+              setRows((r) => [...r, { exerciseId: next.id, sets: last?.sets ?? 2 }]);
             }}
           >
             <IconPlus size={24} /> Add exercise
@@ -173,7 +171,7 @@ function DayEditor({
               </Button>
               <Button
                 variant="primary"
-                disabled={pending || rows.some((r) => !(r.sets > 0) || !(r.reps > 0))}
+                disabled={pending || rows.some((r) => !(r.sets > 0))}
                 onClick={() => start(() => savePlanDay(planId, weekday, rows))}
               >
                 {pending ? "Saving…" : "Save"}

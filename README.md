@@ -20,6 +20,29 @@ Built for use mid-workout with tired hands, on a coarse grid:
 - **Workout focus mode:** one exercise per screen, rest timer in the top bar, "Log set" in the thumb zone,
   everything else in the menu behind the exercise counter.
 
+## Progression
+
+Every set is assumed to be taken to failure. Each exercise has a rep range (default 6–12) and a weight step
+(the smallest change actually possible, default 0.5 kg), set on the Exercises screen. Plans only define the
+number of sets (default 2).
+
+Each set number progresses on its own track — set 2 is only compared with set 2 of the last session, because a
+second set to failure naturally lands lower:
+
+- **Reached the top of the range** → heavier. The Epley 1RM estimate from that set picks the weight (rounded to
+  the step) that should land you mid-range; if even one step would drop you below the range, keep the weight.
+- **Fell below the range** → about 5% lighter, rounded to the step (at least one step).
+- **Otherwise** → same weight, one more rep.
+
+During a workout the rep range is drawn above the controls: the reps you're about to log (blue), what this set
+did last time (ring), and on either end the weight change the next session will suggest if you go past it.
+
+Evidence: load and rep progression give similar results (Plotkin et al. 2022, PeerJ); taking sets close to
+failure matters most for hypertrophy when volume is low (Robinson et al. 2024, Sports Med); hypertrophy is
+similar across a wide load range when sets are hard (Schoenfeld et al. 2017, JSCR); 1RM estimates are most
+accurate at ≤10 reps (Reynolds et al. 2006, JSCR), so they're only used to predict where a new weight lands.
+The rules live in `src/lib/progression.ts` and are covered by `npm test`.
+
 ## Deploy to Vercel
 
 1. Push this repository to GitHub and **import it in Vercel** (framework preset: Next.js, no settings to change).

@@ -14,7 +14,9 @@ import {
 } from "@/app/actions";
 import { ActionBar, Button, Card, EmptyState, Select, cx } from "@/components/ui";
 import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconX } from "@/components/icons";
+import { RepRange } from "@/components/rep-range";
 import { Stepper } from "@/components/stepper";
+import { rangeEnds, suggestSet } from "@/lib/progression";
 import { formatDate } from "@/lib/dates";
 import { fmtDuration, fmtWeight } from "@/lib/format";
 
@@ -27,7 +29,9 @@ type Ex = {
   name: string;
   restSeconds: number | null;
   targetSets: number;
-  targetReps: number;
+  minReps: number;
+  maxReps: number;
+  weightStep: number;
   previous: Prev;
   logs: Log[];
 };
@@ -114,21 +118,21 @@ function parseWeight(v: string) {
   return Number(v.replace(",", "."));
 }
 
-function EditSetSheet({ log, onClose }: { log: Log | null; onClose: () => void }) {
+function EditSetSheet({ log, step = 0.5, onClose }: { log: Log | null; step?: number; onClose: () => void }) {
   return (
     <Sheet open={!!log} onClose={onClose} title={log ? `Set ${log.setNumber}` : ""}>
-      {log && <EditSetForm key={log.id} log={log} onClose={onClose} />}
+      {log && <EditSetForm key={log.id} log={log} step={step} onClose={onClose} />}
     </Sheet>
   );
 }
 
-function EditSetForm({ log, onClose }: { log: Log; onClose: () => void }) {
+function EditSetForm({ log, step, onClose }: { log: Log; step: number; onClose: () => void }) {
   const [weight, setWeight] = useState(String(log.weight));
   const [reps, setReps] = useState(String(log.reps));
   const [pending, start] = useTransition();
   return (
     <div className="flex flex-col gap-2">
-      <Stepper label="Weight (kg)" value={weight} onChange={setWeight} step={2.5} decimal />
+      <Stepper label="Weight (kg)" value={weight} onChange={setWeight} step={step} decimal />
       <Stepper label="Reps" value={reps} onChange={setReps} step={1} />
       <Button
         variant="primary"
@@ -175,19 +179,6 @@ function withPending(exercises: Ex[], pending: PendingLog[]): Ex[] {
   });
 }
 
-function suggestedWeight(ex: Ex) {
-  const prevSet = (n: number) => ex.previous?.sets.find((s) => s.setNumber === n) ?? null;
-  const prev = prevSet(ex.logs.length + 1);
-  const lastHere = ex.logs.at(-1);
-  if (prev && lastHere) {
-    // Carry today's adjustment forward, e.g. last time 60/60/60, today set 1 at 62.5 → suggest 62.5.
-    const prevOfLast = prevSet(lastHere.setNumber);
-    return prevOfLast ? Math.max(0, prev.weight + (lastHere.weight - prevOfLast.weight)) : lastHere.weight;
-  }
-  if (prev) return prev.weight;
-  if (lastHere) return lastHere.weight;
-  return ex.previous?.sets.at(-1)?.weight ?? null;
-}
 
 function FocusView({ data }: { data: WorkoutData }) {
   const [pendingLogs, addPending] = useOptimistic<PendingLog[], PendingLog>([], (s, p) => [...s, p]);
@@ -382,7 +373,7 @@ function FocusView({ data }: { data: WorkoutData }) {
         library={data.library.filter((l) => !exercises.some((e) => e.exerciseId === l.id))}
         onAdded={() => setCurrent(exercises.length)}
       />
-      <EditSetSheet log={editing} onClose={() => setEditing(null)} />
+      <EditSetSheet log={editing} step={ex?.weightStep} onClose={() => setEditing(null)} />
     </div>
   );
 }
@@ -417,13 +408,18 @@ function SetTiles({ ex, extra, onEdit }: { ex: Ex; extra: boolean; onEdit: (l: L
 }
 
 function SetInput({ ex, onLog }: { ex: Ex; onLog: (weight: number, reps: number) => void }) {
-  const initialWeight = suggestedWeight(ex);
-  const [weight, setWeight] = useState(initialWeight != null ? String(initialWeight) : "");
-  const [reps, setReps] = useState(String(ex.targetReps));
-  const prev = ex.previous?.sets.find((s) => s.setNumber === ex.logs.length + 1);
+  const setNumber = ex.logs.length + 1;
+  const range = { min: ex.minReps, max: ex.maxReps };
+  // Each set follows its own track: set N is compared with set N of the previous session.
+  const s = suggestSet(setNumber, ex.previous?.sets ?? [], range, ex.weightStep);
+  const [weight, setWeight] = useState(s.weight != null ? String(s.weight) : "");
+  const [reps, setReps] = useState(String(s.goal ?? ex.minReps));
   const w = parseWeight(weight);
   const r = Number(reps);
   const valid = weight.trim() !== "" && Number.isFinite(w) && w >= 0 && Number.isInteger(r) && r >= 0;
+  const ends = valid ? rangeEnds(w, range, ex.weightStep) : null;
+  const hint =
+    s.last && s.last.weight !== s.weight ? `last ${fmtWeight(s.last.weight)}` : s.kind === "new-set" ? "from previous set" : s.last ? "same as last" : null;
   return (
     <form
       id="set-input"
@@ -433,8 +429,11 @@ function SetInput({ ex, onLog }: { ex: Ex; onLog: (weight: number, reps: number)
         if (valid) onLog(w, r);
       }}
     >
-      <Stepper label="Weight (kg)" hint={prev && `last ${fmtWeight(prev.weight)}`} value={weight} onChange={setWeight} step={2.5} decimal />
-      <Stepper label="Reps" hint={prev ? `last ${prev.reps} · goal ${ex.targetReps}` : `goal ${ex.targetReps}`} value={reps} onChange={setReps} step={1} />
+      <div>
+        <RepRange min={ex.minReps} max={ex.maxReps} reps={Number.isInteger(r) ? r : null} last={s.last?.reps ?? null} weight={valid ? w : null} lower={ends?.lower ?? null} upper={ends?.upper ?? null} />
+        <Stepper label="Weight (kg)" hint={hint} value={weight} onChange={setWeight} step={ex.weightStep} decimal />
+      </div>
+      <Stepper label="Reps" hint={s.last ? `last ${s.last.reps}` : null} value={reps} onChange={setReps} step={1} />
     </form>
   );
 }
@@ -481,8 +480,7 @@ function AddExerciseSheet({
   onAdded: () => void;
 }) {
   const [exerciseId, setExerciseId] = useState<number | "">("");
-  const [sets, setSets] = useState("3");
-  const [reps, setReps] = useState("10");
+  const [sets, setSets] = useState("2");
   const [pending, start] = useTransition();
   return (
     <Sheet open={open} onClose={onClose} title="Add exercise">
@@ -498,7 +496,6 @@ function AddExerciseSheet({
           ))}
         </Select>
         <Stepper label="Sets" value={sets} onChange={setSets} step={1} />
-        <Stepper label="Reps" value={reps} onChange={setReps} step={1} />
         <Button
           variant="primary"
           size="xl"
@@ -506,7 +503,7 @@ function AddExerciseSheet({
           onClick={() =>
             exerciseId &&
             start(async () => {
-              await addSessionExercise(sessionId, exerciseId, Number(sets), Number(reps));
+              await addSessionExercise(sessionId, exerciseId, Number(sets));
               setExerciseId("");
               onAdded();
               onClose();
@@ -568,7 +565,7 @@ function FinishedView({ data }: { data: WorkoutData }) {
           Done
         </Link>
       </ActionBar>
-      <EditSetSheet log={editing} onClose={() => setEditing(null)} />
+      <EditSetSheet log={editing} step={data.exercises.find((e) => e.logs.some((l) => l.id === editing?.id))?.weightStep} onClose={() => setEditing(null)} />
     </div>
   );
 }

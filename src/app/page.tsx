@@ -135,7 +135,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
                   <li key={i.id} className="flex min-h-6 items-center gap-2 px-2">
                     <span className="min-w-0 flex-1 text-body">{i.exerciseName}</span>
                     <span className="tabular text-body text-gray-900">
-                      {i.sets} × {i.reps}
+                      {i.sets} × {i.minReps}–{i.maxReps}
                     </span>
                   </li>
                 ))}

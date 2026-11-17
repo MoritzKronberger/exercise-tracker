@@ -20,7 +20,7 @@ async function Content({ params }: { params: PageProps<"/plans/[id]">["params"] 
   return (
     <PlanEditor
       plan={{ id: plan.id, name: plan.name }}
-      items={plan.items.map((i) => ({ weekday: i.weekday, exerciseId: i.exerciseId, sets: i.sets, reps: i.reps }))}
+      items={plan.items.map((i) => ({ weekday: i.weekday, exerciseId: i.exerciseId, sets: i.sets }))}
       exercises={exercises.map((e) => ({ id: e.id, name: e.name }))}
     />
   );

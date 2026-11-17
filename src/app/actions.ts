@@ -66,20 +66,26 @@ export async function logout() {
 export async function createExercise(formData: FormData) {
   await requireAuth();
   const db = await getDb();
-  const rest = String(formData.get("restSeconds") ?? "").trim();
-  await db.insert(exercises).values({
-    name: str(formData.get("name")),
-    restSeconds: rest ? int(rest, 0, 3600) : null,
-  });
+  await db.insert(exercises).values({ name: str(formData.get("name")) });
   refresh();
 }
 
-export async function updateExercise(id: number, data: { name: string; restSeconds: number | null }) {
+export type ExerciseSettings = { name: string; restSeconds: number | null; minReps: number; maxReps: number; weightStep: number };
+
+export async function updateExercise(id: number, data: ExerciseSettings) {
   await requireAuth();
   const db = await getDb();
+  const minReps = int(data.minReps, 1, 100);
+  const maxReps = int(data.maxReps, minReps + 1, 101);
   await db
     .update(exercises)
-    .set({ name: str(data.name), restSeconds: data.restSeconds == null ? null : int(data.restSeconds, 0, 3600) })
+    .set({
+      name: str(data.name),
+      restSeconds: data.restSeconds == null ? null : int(data.restSeconds, 0, 3600),
+      minReps,
+      maxReps,
+      weightStep: num(data.weightStep, 0.05, 50),
+    })
     .where(eq(exercises.id, id));
   refresh();
 }
@@ -123,7 +129,7 @@ export async function duplicatePlan(id: number) {
   const [copy] = await db.insert(plans).values({ name: `${orig.name} (copy)` }).returning();
   if (items.length) {
     await db.insert(planItems).values(
-      items.map((i) => ({ planId: copy.id, weekday: i.weekday, exerciseId: i.exerciseId, sets: i.sets, reps: i.reps, position: i.position })),
+      items.map((i) => ({ planId: copy.id, weekday: i.weekday, exerciseId: i.exerciseId, sets: i.sets, position: i.position })),
     );
   }
   redirect(`/plans/${copy.id}`);
@@ -136,7 +142,7 @@ export async function deletePlan(id: number) {
   redirect("/plans");
 }
 
-export type DayItemInput = { exerciseId: number; sets: number; reps: number };
+export type DayItemInput = { exerciseId: number; sets: number };
 
 /** Replaces all exercises of one weekday of a plan. */
 export async function savePlanDay(planId: number, weekday: number, items: DayItemInput[]) {
@@ -152,7 +158,6 @@ export async function savePlanDay(planId: number, weekday: number, items: DayIte
           weekday: wd,
           exerciseId: int(i.exerciseId, 1, Number.MAX_SAFE_INTEGER),
           sets: int(i.sets, 1, 50),
-          reps: int(i.reps, 1, 500),
           position: idx,
         })),
       );
@@ -190,7 +195,7 @@ export async function startSession(date: string, scheduleId: number | null) {
   if (!isISODate(date)) throw new Error("Invalid date");
   const db = await getDb();
   let planId: number | null = null;
-  let items: { exerciseId: number; sets: number; reps: number }[] = [];
+  let items: { exerciseId: number; sets: number }[] = [];
   if (scheduleId) {
     const sched = (await listSchedules()).find((s) => s.id === scheduleId);
     if (!sched) throw new Error("Schedule not found");
@@ -209,13 +214,13 @@ export async function startSession(date: string, scheduleId: number | null) {
   const [session] = await db.insert(sessions).values({ date, scheduleId, planId }).returning();
   if (items.length) {
     await db.insert(sessionExercises).values(
-      items.map((i, idx) => ({ sessionId: session.id, exerciseId: i.exerciseId, targetSets: i.sets, targetReps: i.reps, position: idx })),
+      items.map((i, idx) => ({ sessionId: session.id, exerciseId: i.exerciseId, targetSets: i.sets, position: idx })),
     );
   }
   redirect(`/workout/${session.id}`);
 }
 
-export async function addSessionExercise(sessionId: number, exerciseId: number, targetSets: number, targetReps: number) {
+export async function addSessionExercise(sessionId: number, exerciseId: number, targetSets: number) {
   await requireAuth();
   const db = await getDb();
   const [{ pos }] = await db
@@ -226,7 +231,6 @@ export async function addSessionExercise(sessionId: number, exerciseId: number, 
     sessionId,
     exerciseId,
     targetSets: int(targetSets, 1, 50),
-    targetReps: int(targetReps, 1, 500),
     position: (pos ?? -1) + 1,
   });
   refresh();
