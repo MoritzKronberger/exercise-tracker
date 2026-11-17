@@ -418,8 +418,19 @@ function SetInput({ ex, onLog }: { ex: Ex; onLog: (weight: number, reps: number)
   const r = Number(reps);
   const valid = weight.trim() !== "" && Number.isFinite(w) && w >= 0 && Number.isInteger(r) && r >= 0;
   const ends = valid ? rangeEnds(w, range, ex.weightStep) : null;
-  const hint =
-    s.last && s.last.weight !== s.weight ? `last ${fmtWeight(s.last.weight)}` : s.kind === "new-set" ? "from previous set" : s.last ? "same as last" : null;
+  // Make clear the weight is already set: suggested by the rule, unchanged, or overridden by you.
+  const edited = s.weight != null && valid && w !== s.weight;
+  const hint = edited
+    ? `changed · suggested ${fmtWeight(s.weight!)}`
+    : s.kind === "increase" && s.last
+      ? `↑ suggested · was ${fmtWeight(s.last.weight)}`
+      : s.kind === "decrease" && s.last
+        ? `↓ suggested · was ${fmtWeight(s.last.weight)}`
+        : s.kind === "new-set"
+          ? `suggested · from set ${setNumber - 1}`
+          : s.last
+            ? "same as last"
+            : null;
   return (
     <form
       id="set-input"
