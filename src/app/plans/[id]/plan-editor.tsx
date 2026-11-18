@@ -210,10 +210,40 @@ function DayEditor({
   );
 }
 
+/**
+ * Keeps what you type as text, so clearing the field doesn't turn into "0" (and "03" after typing).
+ * Valid numbers are applied as you type; leaving it empty or invalid restores the last valid value.
+ */
 function NumberField({ value, onChange, suffix }: { value: number; onChange: (n: number) => void; suffix: string }) {
+  const [text, setText] = useState(String(value));
+  const [synced, setSynced] = useState(value);
+  if (synced !== value) {
+    setSynced(value);
+    setText(String(value));
+  }
   return (
     <label className="relative w-12">
-      <Input type="number" inputMode="numeric" min={1} className="w-12 pr-6 text-center" value={value} onChange={(e) => onChange(Number(e.target.value))} aria-label={suffix} />
+      <Input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        className="w-12 pr-6 text-center"
+        value={text}
+        // Select on every tap (not just the first focus), so typing always replaces the number.
+        onFocus={(e) => e.target.select()}
+        onClick={(e) => e.currentTarget.select()}
+        onChange={(e) => {
+          const t = e.target.value.replace(/\D/g, "").slice(0, 2);
+          setText(t);
+          const n = Number(t);
+          if (t && n >= 1) {
+            setSynced(n);
+            onChange(n);
+          }
+        }}
+        onBlur={() => setText(String(value))}
+        aria-label={suffix}
+      />
       <span className="pointer-events-none absolute top-0 right-2 flex h-6 items-center text-meta text-gray-900">{suffix}</span>
     </label>
   );
