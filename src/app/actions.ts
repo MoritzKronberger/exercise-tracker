@@ -132,12 +132,21 @@ export async function renamePlan(id: number, name: string) {
   refresh();
 }
 
+export async function setPlanWeekStart(id: number, weekday: number) {
+  const { db, uid } = await context();
+  await db
+    .update(plans)
+    .set({ weekStart: int(weekday, 0, 6) })
+    .where(and(eq(plans.id, id), eq(plans.userId, uid)));
+  refresh();
+}
+
 export async function duplicatePlan(id: number) {
   const { db, uid } = await context();
   const [orig] = await db.select().from(plans).where(and(eq(plans.id, id), eq(plans.userId, uid)));
   if (!orig) return;
   const items = await getPlanItems([id]);
-  const [copy] = await db.insert(plans).values({ userId: uid, name: `${orig.name} (copy)` }).returning();
+  const [copy] = await db.insert(plans).values({ userId: uid, name: `${orig.name} (copy)`, weekStart: orig.weekStart }).returning();
   if (items.length) {
     await db.insert(planItems).values(
       items.map((i) => ({ planId: copy.id, weekday: i.weekday, exerciseId: i.exerciseId, sets: i.sets, position: i.position })),

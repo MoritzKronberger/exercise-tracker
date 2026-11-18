@@ -102,6 +102,8 @@ export const plans = pgTable("plans", {
   id: serial("id").primaryKey(),
   userId: owner(),
   name: text("name").notNull(),
+  /** Day the plan's week begins (0 = Monday … 6 = Sunday); schedules start on it by default. */
+  weekStart: integer("week_start").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

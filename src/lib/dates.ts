@@ -65,3 +65,13 @@ export function scheduleWeek(startDate: string, weeks: number, d: string) {
 
 /** UTC midnight timestamp of a calendar date (used for chart time axes). */
 export const toTs = (d: string) => Date.parse(`${d}T00:00:00Z`);
+
+/** The first date on or after `from` that falls on `weekday` (0 = Monday … 6 = Sunday). */
+export function nextWeekday(from: string, weekday: number) {
+  return addDays(from, (weekday - weekdayOf(from) + 7) % 7);
+}
+
+/** Weekday indexes in plan order, e.g. start 5 (Saturday) → [5, 6, 0, 1, 2, 3, 4]. */
+export function weekdaysFrom(start: number) {
+  return Array.from({ length: 7 }, (_, i) => (start + i) % 7);
+}

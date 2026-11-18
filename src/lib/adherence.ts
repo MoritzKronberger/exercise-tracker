@@ -1,5 +1,5 @@
 // How well a training block is being followed: which planned workouts were done on time, late or skipped.
-import { addDays, startOfWeek, weekdayOf } from "./dates";
+import { addDays, scheduleWeek, weekdayOf } from "./dates";
 
 export type DayStatus = "on-time" | "late" | "skipped" | "today" | "upcoming";
 
@@ -61,7 +61,10 @@ export function computeAdherence({
   }
 
   const count = (st: DayStatus) => [...days.values()].filter((v) => v === st).length;
-  const weekStart = startOfWeek(today);
+  // "This week" is the block's own week (it starts on the schedule's start day, e.g. Saturday):
+  // before the block that's week 1, after it the last week.
+  const blockWeek = scheduleWeek(startDate, weeks, today) ?? (today < startDate ? 1 : weeks);
+  const weekStart = addDays(startDate, (blockWeek - 1) * 7);
   const thisWeek = [...days.entries()].filter(([d]) => d >= weekStart && d <= addDays(weekStart, 6));
   return {
     days,

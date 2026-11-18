@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { deletePlan, duplicatePlan, renamePlan, savePlanDay, type DayItemInput } from "@/app/actions";
+import { deletePlan, duplicatePlan, renamePlan, savePlanDay, setPlanWeekStart, type DayItemInput } from "@/app/actions";
 import { Button, Card, Input, LinkButton, Select, cx } from "@/components/ui";
 import { IconArrowDown, IconArrowUp, IconChevronDown, IconChevronLeft, IconMore, IconPlus, IconTrash } from "@/components/icons";
 import { Sheet, SheetItem } from "@/components/sheet";
-import { WEEKDAYS } from "@/lib/dates";
+import { WEEKDAYS, weekdaysFrom } from "@/lib/dates";
 
 type Item = DayItemInput & { weekday: number };
 type Ex = { id: number; name: string };
 
-export function PlanEditor({ plan, items, exercises }: { plan: { id: number; name: string }; items: Item[]; exercises: Ex[] }) {
+export function PlanEditor({ plan, items, exercises }: { plan: { id: number; name: string; weekStart: number }; items: Item[]; exercises: Ex[] }) {
   const [name, setName] = useState(plan.name);
+  const [weekStart, setWeekStart] = useState(plan.weekStart);
   const [open, setOpen] = useState<number | null>(null);
   const [menu, setMenu] = useState(false);
   const [pending, start] = useTransition();
@@ -45,13 +46,33 @@ export function PlanEditor({ plan, items, exercises }: { plan: { id: number; nam
         </Card>
       )}
 
+      {/* Days are listed from this day, and schedules start on it by default. */}
+      <label className="mb-1 flex min-h-6 items-center justify-between gap-2 text-body text-gray-900">
+        Week starts on
+        <Select
+          className="w-20"
+          value={weekStart}
+          onChange={(e) => {
+            const wd = Number(e.target.value);
+            setWeekStart(wd);
+            start(() => setPlanWeekStart(plan.id, wd));
+          }}
+        >
+          {WEEKDAYS.map((d, i) => (
+            <option key={d} value={i}>
+              {d}
+            </option>
+          ))}
+        </Select>
+      </label>
+
       <div className="flex flex-col gap-1">
-        {WEEKDAYS.map((day, wd) => (
+        {weekdaysFrom(weekStart).map((wd) => (
           <DayEditor
             key={wd}
             planId={plan.id}
             weekday={wd}
-            label={day}
+            label={WEEKDAYS[wd]}
             open={open === wd}
             onToggle={() => setOpen(open === wd ? null : wd)}
             initial={items.filter((i) => i.weekday === wd)}

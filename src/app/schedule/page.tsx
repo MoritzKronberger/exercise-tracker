@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { createSchedule } from "@/app/actions";
 import { LibraryTabs } from "@/components/library-tabs";
-import { Badge, Button, Card, EmptyState, Field, Input, LinkButton, PageSkeleton, Select, SectionTitle, cx } from "@/components/ui";
+import { Badge, Card, EmptyState, LinkButton, PageSkeleton, SectionTitle, cx } from "@/components/ui";
 import { IconChevronLeft, IconChevronRight } from "@/components/icons";
 import { addDays, formatDate, scheduleWeek, startOfWeek, weekdayOf, WEEKDAYS_SHORT } from "@/lib/dates";
 import { getPlanItems, listPlans, listSchedules, sessionSummaries } from "@/lib/data";
 import { userToday } from "@/lib/server";
-import { DeleteScheduleButton, WeeksField } from "./schedule-client";
+import { DeleteScheduleButton, ScheduleForm } from "./schedule-client";
 
 export default function SchedulePage({ searchParams }: PageProps<"/schedule">) {
   return (
@@ -62,24 +61,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/schedule">[
         {plans.length === 0 ? (
           <EmptyState title="No plans yet" action={<LinkButton href="/plans" className="w-full">Create a plan</LinkButton>} />
         ) : (
-          <form action={createSchedule} className="flex flex-col gap-2">
-            <Field label="Plan">
-              <Select name="planId" defaultValue={preselect} required>
-                {plans.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Start">
-              <Input type="date" name="startDate" defaultValue={today} required />
-            </Field>
-            <WeeksField />
-            <Button type="submit" variant="primary" size="xl">
-              Add schedule
-            </Button>
-          </form>
+          <ScheduleForm plans={plans.map((p) => ({ id: p.id, name: p.name, weekStart: p.weekStart }))} preselect={preselect} today={today} />
         )}
       </section>
     </div>

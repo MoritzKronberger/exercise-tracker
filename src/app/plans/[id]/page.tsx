@@ -19,7 +19,7 @@ async function Content({ params }: { params: PageProps<"/plans/[id]">["params"] 
   if (!plan) notFound();
   return (
     <PlanEditor
-      plan={{ id: plan.id, name: plan.name }}
+      plan={{ id: plan.id, name: plan.name, weekStart: plan.weekStart }}
       items={plan.items.map((i) => ({ weekday: i.weekday, exerciseId: i.exerciseId, sets: i.sets }))}
       exercises={exercises.map((e) => ({ id: e.id, name: e.name }))}
     />
