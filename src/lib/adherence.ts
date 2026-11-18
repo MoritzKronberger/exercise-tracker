@@ -35,6 +35,7 @@ export function computeAdherence({
   trainingWeekdays,
   sessions,
   today,
+  focus = today,
   timeZone,
 }: {
   startDate: string;
@@ -43,6 +44,8 @@ export function computeAdherence({
   /** Sessions of this schedule that have at least one logged set. */
   sessions: { date: string; startedAt: Date | string }[];
   today: string;
+  /** The day being looked at: "this week" is the block week containing it (defaults to today). */
+  focus?: string;
   timeZone: string;
 }): Adherence {
   const byDate = new Map<string, string>(); // planned date → local date it was started
@@ -61,9 +64,10 @@ export function computeAdherence({
   }
 
   const count = (st: DayStatus) => [...days.values()].filter((v) => v === st).length;
-  // "This week" is the block's own week (it starts on the schedule's start day, e.g. Saturday):
-  // before the block that's week 1, after it the last week.
-  const blockWeek = scheduleWeek(startDate, weeks, today) ?? (today < startDate ? 1 : weeks);
+  // "This week" is the block's own week (it starts on the schedule's start day, e.g. Saturday) around
+  // the day being looked at: before the block that's week 1, after it the last week. Statuses above
+  // still depend on the real today, so nothing in the future counts as skipped.
+  const blockWeek = scheduleWeek(startDate, weeks, focus) ?? (focus < startDate ? 1 : weeks);
   const weekStart = addDays(startDate, (blockWeek - 1) * 7);
   const thisWeek = [...days.entries()].filter(([d]) => d >= weekStart && d <= addDays(weekStart, 6));
   return {

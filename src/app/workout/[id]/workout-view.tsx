@@ -389,7 +389,10 @@ function SetInput({ ex, onLog }: { ex: Ex; onLog: (weight: number, reps: number)
   const range = { min: ex.minReps, max: ex.maxReps };
   // Each set follows its own track: set N is compared with set N of the previous session.
   const s = suggestSet(setNumber, ex.previous?.sets ?? [], range, ex.weightStep);
-  const [weight, setWeight] = useState(s.weight != null ? String(s.weight) : "");
+  // No history for this set (e.g. the first time you do the exercise): start from the weight you
+  // just used in this workout instead of an empty field.
+  const fromThisWorkout = s.weight == null ? (ex.logs.at(-1)?.weight ?? null) : null;
+  const [weight, setWeight] = useState(s.weight != null ? String(s.weight) : fromThisWorkout != null ? String(fromThisWorkout) : "");
   const [reps, setReps] = useState(String(s.goal ?? ex.minReps));
   const w = parseWeight(weight);
   const r = Number(reps);
@@ -397,7 +400,9 @@ function SetInput({ ex, onLog }: { ex: Ex; onLog: (weight: number, reps: number)
   const ends = valid ? rangeEnds(w, range, ex.weightStep) : null;
   // Weight and reps are labelled by the same rule: pre-filled value vs. this set last time.
   const r_ = Number.isInteger(r) ? r : null;
-  const weightHint = changeHint(valid ? w : null, s.weight, s.last?.weight ?? null) ?? (s.kind === "new-set" ? `from set ${setNumber - 1}` : null);
+  const weightHint =
+    changeHint(valid ? w : null, s.weight, s.last?.weight ?? null) ??
+    (s.kind === "new-set" || (fromThisWorkout != null && w === fromThisWorkout) ? `from set ${setNumber - 1}` : null);
   const repsHint = changeHint(r_, s.goal, s.last?.reps ?? null);
   return (
     <form

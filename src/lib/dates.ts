@@ -75,3 +75,8 @@ export function nextWeekday(from: string, weekday: number) {
 export function weekdaysFrom(start: number) {
   return Array.from({ length: 7 }, (_, i) => (start + i) % 7);
 }
+
+/** Start of the 7-day week containing `date`, for weeks that begin on the same weekday as `anchor`. */
+export function alignedWeekStart(date: string, anchor: string) {
+  return addDays(anchor, Math.floor(diffDays(date, anchor) / 7) * 7);
+}
