@@ -30,7 +30,6 @@ async function Content({ searchParams }: { searchParams: PageProps<"/schedule">[
   const items = await getPlanItems(plans.map((p) => p.id));
   const preselect = Number(sp.plan) || plans[0]?.id;
   const month = typeof sp.month === "string" && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : today.slice(0, 7);
-  const nextMonday = weekdayOf(today) === 0 ? today : addDays(startOfWeek(today), 7);
   const colorOf = new Map([...schedules].reverse().map((s, i) => [s.id, PALETTE[i % PALETTE.length]]));
 
   return (
@@ -74,7 +73,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/schedule">[
               </Select>
             </Field>
             <Field label="Start">
-              <Input type="date" name="startDate" defaultValue={nextMonday} required />
+              <Input type="date" name="startDate" defaultValue={today} required />
             </Field>
             <WeeksField />
             <Button type="submit" variant="primary" size="xl">
