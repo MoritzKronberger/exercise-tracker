@@ -14,6 +14,11 @@ import { getDb, schema, type DB } from "@/db";
 
 export const INVITE_HEADER = "x-invite-code";
 
+/** Forgiving about how the code was typed or pasted: surrounding spaces/quotes and Unicode forms. */
+export function normalizeInvite(value: string | null | undefined) {
+  return (value ?? "").trim().replace(/^(["'])(.*)\1$/, "$2").trim().normalize("NFC");
+}
+
 async function userCount(db: DB) {
   const [{ n }] = await db.select({ n: count() }).from(schema.authUser);
   return n;
@@ -63,9 +68,18 @@ function create(db: DB) {
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         if (ctx.path !== "/sign-up/email") return;
-        const invite = process.env.APP_PASSWORD;
-        const given = ctx.headers?.get(INVITE_HEADER) ?? "";
+        const invite = normalizeInvite(process.env.APP_PASSWORD);
+        let given = "";
+        try {
+          given = normalizeInvite(decodeURIComponent(ctx.headers?.get(INVITE_HEADER) ?? ""));
+        } catch {}
         if (invite ? given !== invite : (await userCount(db)) > 0) {
+          // Diagnose without revealing the code (visible in the Vercel function logs).
+          console.warn(
+            invite
+              ? `[auth] Sign-up rejected: invite code mismatch (entered ${given.length} characters, expected ${invite.length}).`
+              : "[auth] Sign-up rejected: APP_PASSWORD is not set for this deployment and an account already exists.",
+          );
           throw new APIError("FORBIDDEN", { message: "Invalid invite code." });
         }
       }),

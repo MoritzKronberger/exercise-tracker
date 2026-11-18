@@ -35,7 +35,8 @@ export async function signUp(_: FormState, formData: FormData): Promise<FormStat
   if (password.length < 8) return { error: "Use at least 8 characters for the password.", email };
   // The invite code travels as a header so Better Auth's own sign-up hook can check it.
   const h = new Headers(await headers());
-  h.set(INVITE_HEADER, String(formData.get("invite") ?? ""));
+  // Percent-encoded so any character survives the trip through an HTTP header.
+  h.set(INVITE_HEADER, encodeURIComponent(String(formData.get("invite") ?? "")));
   try {
     await auth.api.signUpEmail({ body: { email, password, name: email.split("@")[0] || email }, headers: h });
   } catch (err) {
