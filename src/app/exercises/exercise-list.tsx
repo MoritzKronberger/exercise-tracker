@@ -100,21 +100,31 @@ function ExerciseRow({ row, open, onToggle }: { row: Row; open: boolean; onToggl
               <Input type="number" inputMode="numeric" placeholder="none" value={rest} onChange={(e) => setRest(e.target.value)} />
             </Field>
           </div>
+          <Button type="submit" variant="primary" disabled={pending || !valid}>
+            Save
+          </Button>
           <div className="grid grid-cols-2 gap-1">
+            {/* Archive hides it from plans and pickers but keeps its history; delete removes everything. */}
+            <Button variant="ghost" disabled={pending} onClick={() =>
+                start(async () => {
+                  await setExerciseArchived(row.id, !row.archived);
+                  onToggle(); // close the row; it moves to the other list
+                })
+              }>
+              {row.archived ? "Restore" : "Archive"}
+            </Button>
             <Button
               variant="danger"
               disabled={pending}
-              onClick={() => {
-                if (row.archived) start(() => setExerciseArchived(row.id, false));
-                else if (row.loggedSets > 0) {
-                  if (confirm(`Archive “${row.name}”? Its history is kept.`)) start(() => setExerciseArchived(row.id, true));
-                } else if (confirm(`Delete “${row.name}”? It is also removed from plans.`)) start(() => deleteExercise(row.id));
-              }}
+              onClick={() =>
+                confirm(
+                  row.loggedSets > 0
+                    ? `Delete “${row.name}” and its ${row.loggedSets} logged set${row.loggedSets === 1 ? "" : "s"}? It's also removed from plans. This can't be undone — Archive keeps the history.`
+                    : `Delete “${row.name}”? It's also removed from plans.`,
+                ) && start(() => deleteExercise(row.id))
+              }
             >
-              {row.archived ? "Restore" : row.loggedSets > 0 ? "Archive" : "Delete"}
-            </Button>
-            <Button type="submit" variant="primary" disabled={pending || !valid}>
-              Save
+              Delete
             </Button>
           </div>
         </form>

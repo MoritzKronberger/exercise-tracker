@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { deletePlan, duplicatePlan, renamePlan, savePlanDay, type DayItemInput } from "@/app/actions";
 import { Button, Card, Input, LinkButton, Select, cx } from "@/components/ui";
-import { IconChevronDown, IconChevronLeft, IconPlus, IconTrash } from "@/components/icons";
+import { IconArrowDown, IconArrowUp, IconChevronDown, IconChevronLeft, IconMore, IconPlus, IconTrash } from "@/components/icons";
+import { Sheet, SheetItem } from "@/components/sheet";
 import { WEEKDAYS } from "@/lib/dates";
 
 type Item = DayItemInput & { weekday: number };
@@ -13,13 +14,19 @@ type Ex = { id: number; name: string };
 export function PlanEditor({ plan, items, exercises }: { plan: { id: number; name: string }; items: Item[]; exercises: Ex[] }) {
   const [name, setName] = useState(plan.name);
   const [open, setOpen] = useState<number | null>(null);
+  const [menu, setMenu] = useState(false);
   const [pending, start] = useTransition();
 
   return (
     <div>
-      <Link href="/plans" className="-ml-1 flex h-6 w-fit items-center gap-1 px-1 text-body text-gray-900">
-        <IconChevronLeft size={24} /> Plans
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/plans" className="-ml-1 flex h-6 w-fit items-center gap-1 px-1 text-body text-gray-900">
+          <IconChevronLeft size={24} /> Plans
+        </Link>
+        <Button variant="ghost" className="-mr-1 px-0" onClick={() => setMenu(true)} aria-label="Plan actions">
+          <IconMore size={24} />
+        </Button>
+      </div>
       <input
         className="mb-2 h-7 w-full rounded-sm bg-transparent text-display font-semibold tracking-tight outline-none focus:bg-gray-alpha-100"
         value={name}
@@ -57,14 +64,19 @@ export function PlanEditor({ plan, items, exercises }: { plan: { id: number; nam
       <LinkButton href={`/schedule?plan=${plan.id}`} variant="primary" size="xl" className="mt-3 w-full">
         Schedule this plan
       </LinkButton>
-      <div className="mt-1 grid grid-cols-2 gap-1">
-        <Button variant="ghost" onClick={() => start(() => duplicatePlan(plan.id))} disabled={pending}>
-          Duplicate
-        </Button>
-        <Button variant="danger" onClick={() => confirm(`Delete “${plan.name}” and its schedules?`) && start(() => deletePlan(plan.id))} disabled={pending}>
-          Delete
-        </Button>
-      </div>
+
+      <Sheet open={menu} onClose={() => setMenu(false)} title={plan.name}>
+        <SheetItem disabled={pending} onClick={() => start(() => duplicatePlan(plan.id))}>
+          Duplicate plan
+        </SheetItem>
+        <SheetItem
+          danger
+          disabled={pending}
+          onClick={() => confirm(`Delete “${plan.name}” and its schedules? Logged workouts are kept.`) && start(() => deletePlan(plan.id))}
+        >
+          Delete plan
+        </SheetItem>
+      </Sheet>
     </div>
   );
 }
@@ -101,6 +113,12 @@ function DayEditor({
   const otherDays = [...new Set(all.map((i) => i.weekday))].filter((d) => d !== weekday);
   const nameOf = (id: number) => exercises.find((e) => e.id === id)?.name ?? "(archived)";
   const update = (idx: number, patch: Partial<DayItemInput>) => setRows((r) => r.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
+  const move = (idx: number, by: -1 | 1) =>
+    setRows((r) => {
+      const next = [...r];
+      [next[idx], next[idx + by]] = [next[idx + by], next[idx]];
+      return next;
+    });
 
   return (
     <Card className={cx("overflow-hidden", dirty && "shadow-[0_0_0_2px_var(--ds-blue-700)]")}>
@@ -124,9 +142,17 @@ function DayEditor({
               </Select>
               <div className="flex items-center gap-1">
                 <NumberField value={row.sets} onChange={(n) => update(idx, { sets: n })} suffix="sets" />
-                <Button variant="ghost" className="ml-auto px-0" onClick={() => setRows((r) => r.filter((_, i) => i !== idx))} aria-label="Remove">
-                  <IconTrash size={24} />
-                </Button>
+                <div className="ml-auto flex">
+                  <Button variant="ghost" className="px-0" onClick={() => move(idx, -1)} disabled={idx === 0} aria-label="Move up">
+                    <IconArrowUp size={24} />
+                  </Button>
+                  <Button variant="ghost" className="px-0" onClick={() => move(idx, 1)} disabled={idx === rows.length - 1} aria-label="Move down">
+                    <IconArrowDown size={24} />
+                  </Button>
+                  <Button variant="ghost" className="px-0" onClick={() => setRows((r) => r.filter((_, i) => i !== idx))} aria-label="Remove">
+                    <IconTrash size={24} />
+                  </Button>
+                </div>
               </div>
             </div>
           ))}

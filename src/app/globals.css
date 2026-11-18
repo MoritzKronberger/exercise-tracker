@@ -146,6 +146,8 @@
 
 html {
   -webkit-tap-highlight-color: transparent;
+  /* Anything scrolled into view (focused fields, buttons) stays clear of the fixed tab bar. */
+  scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom));
 }
 
 body {

@@ -61,3 +61,8 @@ export const IconLogout = (p: P) => (
 export const IconUser = (p: P) => (
   <Icon {...p}><circle cx="8" cy="5.5" r="2.75" /><path d="M2.75 14c.6-2.6 2.7-4.25 5.25-4.25S12.65 11.4 13.25 14" /></Icon>
 );
+export const IconMore = (p: P) => (
+  <Icon {...p}><circle cx="3.5" cy="8" r="0.75" fill="currentColor" /><circle cx="8" cy="8" r="0.75" fill="currentColor" /><circle cx="12.5" cy="8" r="0.75" fill="currentColor" /></Icon>
+);
+export const IconArrowUp = (p: P) => <Icon {...p}><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" /></Icon>;
+export const IconArrowDown = (p: P) => <Icon {...p}><path d="M8 3v10M3.5 8.5 8 13l4.5-4.5" /></Icon>;
